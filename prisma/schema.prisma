@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String
+  name           String?
+  role           Role     @default(USER)
+  monthlyLimit   Int      @default(40)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Bookings Booking[]
+  apiKeys  ApiKey[]
+}
+
+model ApiKey {
+  id        String    @unique @default(cuid())
+  keyHash   String    @id
+  name      String
+  userId    String
+  hits      Int       @default(0)
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+  isRevoked Boolean   @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Device {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  building    String
+  room        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceId   String
+  startTime  DateTime
+  endTime    DateTime
+  duration   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isCanceled Boolean  @default(false)
+
+  user   User   @relation(fields: [userId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
