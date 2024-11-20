@@ -1,6 +1,7 @@
 import { authorizeApiEndpoint, ensureAdminOrCertainUser } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { RESPONSES } from '@/lib/responses'
 import { NextResponse } from 'next/server'
 
 interface DynamicParams extends Record<string, string> {
@@ -18,11 +19,11 @@ export const DELETE = auth(async function (request, { params }) {
 			where: { id: keyId, userId },
 			data: { isRevoked: true },
 		})
-		if (revokedKey) return NextResponse.json({ message: 'Successful' }, { status: 200 })
-		else return NextResponse.json({ message: 'No API-key found with specified ID' }, { status: 400 })
+		if (revokedKey) return RESPONSES.SUCCESS.RESOURCE.DELETED('API-key', revokedKey)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('API-key')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })

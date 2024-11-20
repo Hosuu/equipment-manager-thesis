@@ -1,6 +1,7 @@
-import { authorizeApiEndpoint, ensureAdminOrCertainUser } from '@/lib/api'
+import { authorizeApiEndpoint, ensureAdminOrCertainUser, getPaginationParams } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { RESPONSES } from '@/lib/responses'
 import { NextResponse } from 'next/server'
 
 interface DynamicParams extends Record<string, string> {
@@ -13,8 +14,13 @@ export const GET = auth(async function (request, { params }) {
 		const { userId } = params as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
-		const userData = await prisma.booking.findMany({
-			where: { userId: userId },
+		const { limit, offset, page } = getPaginationParams(request)
+		const totalCount = await prisma.booking.count({ where: { userId: auth.id } })
+		const totalPages = Math.ceil(totalCount / limit)
+		const bookings = await prisma.booking.findMany({
+			skip: offset,
+			take: limit,
+			where: { userId: auth.id },
 			select: {
 				id: true,
 				device: { select: { id: true, name: true, building: true, room: true } },
@@ -22,10 +28,15 @@ export const GET = auth(async function (request, { params }) {
 				endTime: true,
 			},
 		})
-		return NextResponse.json(userData, { status: 200 })
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('booking', bookings, {
+			limit,
+			page,
+			totalCount,
+			totalPages,
+		})
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })

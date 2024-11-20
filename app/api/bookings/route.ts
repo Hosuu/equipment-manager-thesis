@@ -1,26 +1,27 @@
 import {
 	authorizeApiEndpoint,
 	ensureAdminOrCertainUser,
+	getPaginationParams,
 	isDeviceAvailable,
 	parseJsonBody,
 } from '@/lib/api'
 import { auth } from '@/lib/auth'
+import { getHoursFromTimeRange, getUserMonthSpanQuota } from '@/lib/bookings'
 import prisma from '@/lib/db'
+import { RESPONSES } from '@/lib/responses'
+import { createBookingSchema } from '@/lib/zod'
 import { Role } from '@prisma/client'
 import { NextResponse } from 'next/server'
-import { z, ZodError } from 'zod'
+import { ZodError } from 'zod'
 
 export const GET = auth(async function (request) {
 	try {
 		await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const deviceId = request.nextUrl.searchParams.get('deviceId') ?? undefined
-		const page = parseInt(request.nextUrl.searchParams.get('page') ?? '1', 10)
-		const limit = parseInt(request.nextUrl.searchParams.get('limit') ?? '10', 10)
-		const offset = (page - 1) * limit
+		const { page, limit, offset } = getPaginationParams(request)
 		const totalCount = await prisma.booking.count()
 		const totalPages = Math.ceil(totalCount / limit)
-
 		const bookings = await prisma.booking.findMany({
 			skip: offset,
 			take: limit,
@@ -33,87 +34,51 @@ export const GET = auth(async function (request) {
 				endTime: true,
 			},
 		})
-		return NextResponse.json(
-			{
-				bookings,
-				meta: {
-					page,
-					limit,
-					totalPages,
-					totalCount,
-				},
-			},
-			{ status: 200 }
-		)
+
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('booking', bookings, {
+			limit,
+			page,
+			totalCount,
+			totalPages,
+		})
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
-})
-
-const requestDataSchema = z.object({
-	userId: z.string({ required_error: "'userId' is required" }),
-	deviceId: z.string({ required_error: "'deviceId' is required" }),
-	startTime: z
-		.date({ required_error: "'startTime' is required" })
-		.min(new Date(), 'Date must be in future'),
-	endTime: z
-		.date({ required_error: "'startTime' is required" })
-		.min(new Date(), 'Date must be in future'),
 })
 
 export const POST = auth(async function (request) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-
 		const body = await parseJsonBody(request)
-		const { userId, deviceId, startTime, endTime } = requestDataSchema.parse(body)
+		const { userId, deviceId, startTime, endTime } = createBookingSchema.parse(body)
 		ensureAdminOrCertainUser(auth, userId)
 
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			select: { monthlyLimit: true },
-		})
-		if (user === null)
-			throw NextResponse.json({ message: 'User with such an ID doesnt exist' }, { status: 400 })
+		const user = await prisma.user.findUnique({where: { id: userId }, select: { monthlyLimit: true }}) //prettier-ignore
+		if (user === null) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 
 		const device = await prisma.device.findUnique({ where: { id: deviceId }, select: { id: true } })
-		if (device === null)
-			throw NextResponse.json({ message: 'Device with such an ID doesnt exist' }, { status: 400 })
+		if (device === null) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('device')
 
 		const isAvailable = await isDeviceAvailable(deviceId, startTime, endTime)
-		if (!isAvailable) throw NextResponse.json({ message: 'Device already reserved in provided timespan' }, { status: 400 }) //prettier-ignore
+		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE
 
-		const seekDuration = 1000 * 60 * 60 * 24 * 15
-		const startSearch = new Date(startTime.getTime() - seekDuration)
-		const endSearch = new Date(endTime.getTime() + seekDuration)
-
-		const userMonthSpanReservations = await prisma.booking.findMany({
-			where: {
-				endTime: { gte: startSearch },
-				startTime: { lte: endSearch },
-				userId: userId,
-			},
-		})
-
-		const userMonthSpanQuota = userMonthSpanReservations.reduce((sum, r) => (sum += r.duration), 0)
-		const duration = Math.ceil((endTime.getTime() - startTime.getTime()) / 1000 / 60 / 60)
-
+		const duration = getHoursFromTimeRange(startTime, endTime)
+		const userMonthSpanQuota = await getUserMonthSpanQuota(userId, startTime, endTime)
 		const didExceededLimit = userMonthSpanQuota + duration > user.monthlyLimit
-		if (didExceededLimit)
-			throw NextResponse.json({ message: 'User monthly limit exceeded' }, { status: 400 })
+		if (didExceededLimit) return RESPONSES.ERROR.MONTHLY_LIMIT_EXCEEDED
 
 		const createdBooking = await prisma.booking.create({
 			data: { startTime, endTime, duration, deviceId, userId },
 			select: { id: true },
 		})
 
-		return NextResponse.json(createdBooking, { status: 201 })
+		return RESPONSES.SUCCESS.RESOURCE.CREATED('booking', createdBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
-		if (error instanceof ZodError) return NextResponse.json({ message: error.issues[0].message }, { status: 400 }) //prettier-ignore
+		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })

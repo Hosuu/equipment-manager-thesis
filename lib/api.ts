@@ -2,7 +2,7 @@ import prisma from '@/lib/db'
 import { NextAuthRequest } from '@/types'
 import { Role } from '@prisma/client'
 import { createHash } from 'crypto'
-import { NextResponse } from 'next/server'
+import { RESPONSES } from './responses'
 
 const APIKEY_SALT = process.env.APIKEY_SALT
 export function generateApiKeyHash(key: string) {
@@ -29,11 +29,7 @@ export async function parseJsonBody(request: NextAuthRequest) {
 		return body
 	} catch (error) {
 		if (error instanceof Error) console.error(error.message)
-
-		throw NextResponse.json(
-			{ message: 'The server could not understand the request due to incorrect syntax.' },
-			{ status: 400 }
-		)
+		throw RESPONSES.ERROR.DATA.INVALID_JSON_BODY
 	}
 }
 
@@ -41,12 +37,12 @@ async function verifyApiKey(key: string) {
 	console.log(key)
 	const keyHash = generateApiKeyHash(key)
 	console.log(keyHash)
-	const apiKey = await prisma.apiKey.findUnique({
+	const data = await prisma.apiKey.findUnique({
 		where: { keyHash, isRevoked: false },
 		select: { id: true, user: { select: { id: true, role: true } } },
 	})
 
-	if (apiKey) return apiKey
+	if (data) return { apiKeyId: data.id, user: data.user }
 
 	throw null
 }
@@ -68,20 +64,20 @@ async function authenticateApiEndpoint(request: NextAuthRequest) {
 	}
 
 	// 3. Check for API_KEY in request body
-	try {
-		if (request.method === 'POST' || request.method === 'PUT') {
-			const body = await parseJsonBody(request)
-			if ('API_KEY' in body) return await verifyApiKey(body.API_KEY)
-		}
-	} catch (error) {
-		if (error instanceof Error) console.error(error.message)
-	}
+	// try {
+	// 	if (request.method === 'POST' || request.method === 'PUT') {
+	// 		const body = await parseJsonBody(request)
+	// 		if ('API_KEY' in body) return await verifyApiKey(body.API_KEY)
+	// 	}
+	// } catch (error) {
+	// 	if (error instanceof Error) console.error(error.message)
+	// }
 
 	//4. Check sessionCookie
 	try {
 		if (request?.auth?.user) {
 			const { id, role } = request.auth.user
-			return { id: null, user: { id: id!, role } }
+			return { apiKeyId: null, user: { id: id!, role } }
 		}
 	} catch (error) {
 		if (error instanceof Error) console.error(error.message)
@@ -91,22 +87,28 @@ async function authenticateApiEndpoint(request: NextAuthRequest) {
 }
 
 export async function authorizeApiEndpoint(request: NextAuthRequest, requiredRole: Role = Role.USER) {
-	const apiKey = await authenticateApiEndpoint(request)
+	const auth = await authenticateApiEndpoint(request)
 
-	if (apiKey === null) throw NextResponse.json({ message: 'Not authenticated' }, { status: 401 })
-	if (requiredRole === 'ADMIN' && apiKey.user.role != 'ADMIN')
-		throw NextResponse.json({ message: 'Forbidden: Insufficient permissions' }, { status: 403 })
+	if (auth === null) throw RESPONSES.ERROR.AUTH.NOT_AUTHENTICATED
+	if (requiredRole === 'ADMIN' && auth.user.role != 'ADMIN')
+		throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS
 
-	if (apiKey.id)
+	if (auth.apiKeyId)
 		await prisma.apiKey.update({
-			where: { id: apiKey.id },
+			where: { id: auth.apiKeyId },
 			data: { hits: { increment: 1 }, lastUsed: new Date() },
 		})
 
-	return apiKey.user
+	return auth.user
 }
 
 export async function ensureAdminOrCertainUser(auth: { role: Role; id: string }, userId: string) {
-	if (auth.role !== 'ADMIN' || userId !== auth.id)
-		throw NextResponse.json({ message: 'Forbidden: Insufficient permissions' }, { status: 403 })
+	if (auth.role !== 'ADMIN' || userId !== auth.id) throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS
+}
+
+export function getPaginationParams(request: NextAuthRequest) {
+	const page = parseInt(request.nextUrl.searchParams.get('page') ?? '1', 10)
+	const limit = parseInt(request.nextUrl.searchParams.get('limit') ?? '10', 10)
+	const offset = (page - 1) * limit
+	return { page, limit, offset }
 }

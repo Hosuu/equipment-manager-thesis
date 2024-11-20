@@ -1,0 +1,23 @@
+services:
+  next-app:
+    build:
+      context: .
+    links:
+      - "db:database"
+    image: nextjs-dev
+    ports:
+      - 3000:3000
+      - 5555:5555
+    environment:
+      - NODE_DEV=development
+      - POSTGRES_URL=postgres://postgres:dbpass@db:5432/mydatabase
+    depends_on:
+      - db
+    env_file:
+      - .env
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: dbpass
+    expose:
+      - 5432

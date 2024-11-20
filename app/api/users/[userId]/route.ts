@@ -1,8 +1,10 @@
-import { authorizeApiEndpoint, parseJsonBody } from '@/lib/api'
+import { authorizeApiEndpoint, ensureAdminOrCertainUser, parseJsonBody } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { RESPONSES } from '@/lib/responses'
+import { changeUserNameSchema } from '@/lib/zod'
 import { NextResponse } from 'next/server'
-import { string, z, ZodError } from 'zod'
+import { ZodError } from 'zod'
 
 interface DynamicParams extends Record<string, string> {
 	userId: string
@@ -11,10 +13,8 @@ interface DynamicParams extends Record<string, string> {
 export const GET = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-
 		const { userId } = params as DynamicParams
-		if (auth.role !== 'ADMIN' || userId !== auth.id)
-			return NextResponse.json({ message: 'Forbidden: Insufficient permissions' }, { status: 403 })
+		ensureAdminOrCertainUser(auth, userId)
 
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
@@ -28,26 +28,23 @@ export const GET = auth(async function (request, { params }) {
 				updatedAt: true,
 			},
 		})
-		return NextResponse.json(user, { status: 200 })
+
+		return RESPONSES.SUCCESS.RESOURCE.FOUND('user', user)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })
 
-const endpointSchema = z.object({ name: string({ required_error: "'name' is required" }) })
-
-export const PUST = auth(async function (request, { params }) {
+export const PUT = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-
 		const { userId } = params as DynamicParams
-		if (auth.role !== 'ADMIN' || userId !== auth.id)
-			return NextResponse.json({ message: 'Forbidden: Insufficient permissions' }, { status: 403 })
+		ensureAdminOrCertainUser(auth, userId)
 
 		const body = await parseJsonBody(request)
-		const { name } = endpointSchema.parse(body)
+		const { name } = changeUserNameSchema.parse(body)
 
 		const updatedUser = await prisma.user.update({
 			where: { id: userId },
@@ -62,30 +59,28 @@ export const PUST = auth(async function (request, { params }) {
 				updatedAt: true,
 			},
 		})
-		if (updatedUser != null) return NextResponse.json(updatedUser, { status: 200 })
-		else return NextResponse.json({ message: 'No User found with specified ID' }, { status: 400 })
+		if (updatedUser != null) return RESPONSES.SUCCESS.RESOURCE.UPDATED('user', updatedUser)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
-		if (error instanceof ZodError) return NextResponse.json({ message: error.issues[0].message }, { status: 400 }) //prettier-ignore
+		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })
 
 export const DELETE = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-
 		const { userId } = params as DynamicParams
-		if (auth.role !== 'ADMIN' || userId !== auth.id)
-			return NextResponse.json({ message: 'Forbidden: Insufficient permissions' }, { status: 403 })
+		ensureAdminOrCertainUser(auth, userId)
 
-		const deletedUser = await prisma.user.delete({ where: { id: userId } })
-		if (deletedUser != null) return NextResponse.json({ message: 'Successful' }, { status: 200 })
-		else return NextResponse.json({ message: 'No User found with specified ID' }, { status: 400 })
+		const deletedUser = await prisma.user.delete({ where: { id: userId }, select: { id: true } })
+		if (deletedUser != null) return RESPONSES.SUCCESS.RESOURCE.DELETED('user', deletedUser)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })

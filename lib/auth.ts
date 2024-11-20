@@ -1,7 +1,9 @@
-import bcrypt from 'bcryptjs'
+import bcrypt, { hashSync } from 'bcryptjs'
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import prisma from './db'
+
+export const hashPasword = (password: string) => hashSync(password, 10)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
 	pages: {
