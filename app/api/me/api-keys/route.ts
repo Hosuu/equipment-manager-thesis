@@ -17,9 +17,16 @@ export const GET = auth(async function (request) {
 			skip: offset,
 			take: limit,
 			where: { userId: auth.id },
-			select: { id: true, name: true, hits: true, lastUsed: true, createdAt: true },
+			select: {
+				id: true,
+				name: true,
+				hits: true,
+				lastUsed: true,
+				createdAt: true,
+				isRevoked: true,
+			},
 		})
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('API-key', apikeys, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<ApiKey[]>('API-key', apikeys, {
 			limit,
 			page,
 			totalCount,
@@ -35,16 +42,23 @@ export const GET = auth(async function (request) {
 export const POST = auth(async function (request) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const body = parseJsonBody(request)
+		const body = await parseJsonBody(request)
 		const { name } = createApiKeySchema.parse(body)
 		const key = randomBytes(48).toString('base64')
 		const keyHash = generateApiKeyHash(key)
 
 		const apiKey = await prisma.apiKey.create({
 			data: { keyHash, name, userId: auth.id },
-			select: { name: true },
+			select: {
+				id: true,
+				name: true,
+				hits: true,
+				lastUsed: true,
+				createdAt: true,
+				isRevoked: true,
+			},
 		})
-		return RESPONSES.SUCCESS.RESOURCE.CREATED('API-key', { key, ...apiKey })
+		return RESPONSES.SUCCESS.RESOURCE.CREATED<CreatedApiKey>('API-key', { key, ...apiKey })
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)

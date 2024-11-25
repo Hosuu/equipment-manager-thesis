@@ -19,23 +19,28 @@ export const GET = auth(async function (request) {
 		await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const deviceId = request.nextUrl.searchParams.get('deviceId') ?? undefined
+		const userId = request.nextUrl.searchParams.get('userId') ?? undefined
+		const startDate = request.nextUrl.searchParams.get('startDate') ?? undefined
+		const endDate = request.nextUrl.searchParams.get('endDate') ?? undefined
 		const { page, limit, offset } = getPaginationParams(request)
 		const totalCount = await prisma.booking.count()
 		const totalPages = Math.ceil(totalCount / limit)
 		const bookings = await prisma.booking.findMany({
 			skip: offset,
 			take: limit,
-			where: { deviceId, isCanceled: false },
+			where: { deviceId, userId, startTime: { lte: endDate }, endTime: { gte: startDate } },
+
 			select: {
 				id: true,
+				user: { select: { id: true, email: true, name: true } },
 				device: { select: { id: true, name: true, building: true, room: true } },
-				user: { select: { id: true, email: true } },
 				startTime: true,
 				endTime: true,
+				isCanceled: true,
 			},
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('booking', bookings, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<BasicBooking[]>('booking', bookings, {
 			limit,
 			page,
 			totalCount,
@@ -71,10 +76,20 @@ export const POST = auth(async function (request) {
 
 		const createdBooking = await prisma.booking.create({
 			data: { startTime, endTime, duration, deviceId, userId },
-			select: { id: true },
+			select: {
+				id: true,
+				user: { select: { id: true, email: true, name: true } },
+				device: { select: { id: true, name: true, building: true, room: true } },
+				startTime: true,
+				endTime: true,
+				duration: true,
+				createdAt: true,
+				updatedAt: true,
+				isCanceled: true,
+			},
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.CREATED('booking', createdBooking)
+		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedBooking>('booking', createdBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)

@@ -13,17 +13,20 @@ export const GET = auth(async function (request) {
 		await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const query = request.nextUrl.searchParams.get('query') ?? undefined
+		const includeRole = Boolean(request.nextUrl.searchParams.get('includeRole') ?? false)
 		const { page, limit, offset } = getPaginationParams(request)
-		const totalCount = await prisma.user.count({ where: { email: { contains: query } } })
+		const totalCount = await prisma.user.count({
+			where: { name: { contains: query, mode: 'insensitive' } },
+		})
 		const totalPages = Math.ceil(totalCount / limit)
 		const users = await prisma.user.findMany({
 			skip: offset,
 			take: limit,
-			where: { email: { contains: query } },
-			select: { id: true, email: true },
+			where: { name: { contains: query, mode: 'insensitive' } },
+			select: { id: true, email: true, name: true, role: includeRole },
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('user', users, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<BasicUser[]>('user', users, {
 			limit,
 			page,
 			totalCount,
@@ -45,10 +48,18 @@ export const POST = auth(async function (request) {
 		const hashedPassword = hashPasword(password)
 		const createdUser = await prisma.user.create({
 			data: { email, hashedPassword, role, name },
-			select: { id: true, email: true, name: true, role: true },
+			select: {
+				id: true,
+				email: true,
+				name: true,
+				role: true,
+				createdAt: true,
+				updatedAt: true,
+				monthlyLimit: true,
+			},
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.CREATED('user', createdUser)
+		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedUser>('user', createdUser)
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002')
 			return RESPONSES.ERROR.AUTH.EMAIL_ALREADY_REGISTERED

@@ -21,11 +21,11 @@ export const updateBookingSchema = z.object({
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "'startTime' must be a future date.",
 		})
-		.refine((date) => date.getHours() >= 6, {
-			message: "'startTime' must be at or after 6:00.",
+		.refine((date) => date.getHours() > 5, {
+			message: "'startTime' must be after 6:00.",
 		})
-		.refine((date) => date.getHours() <= 22, {
-			message: "'startTime' must be at or before 22:00.",
+		.refine((date) => date.getHours() < 23, {
+			message: "'startTime' must be before 22:00.",
 		})
 		.optional(),
 
@@ -33,11 +33,11 @@ export const updateBookingSchema = z.object({
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "'endTime' must be a future date.",
 		})
-		.refine((date) => date.getHours() >= 6, {
-			message: "'endTime' must be at or after 6:00.",
+		.refine((date) => date.getHours() > 5, {
+			message: "'endTime' must be after 6:00.",
 		})
-		.refine((date) => date.getHours() <= 22, {
-			message: "'endTime' must be at or before 22:00.",
+		.refine((date) => date.getHours() < 23, {
+			message: "'endTime' must be before 22:00.",
 		})
 		.optional(),
 })
@@ -50,21 +50,21 @@ export const createBookingSchema = z
 			.refine((date) => date.getTime() > Date.now(), {
 				message: "'startTime' must be a future date.",
 			})
-			.refine((date) => date.getHours() >= 6, {
-				message: "'startTime' must be at or after 6:00.",
+			.refine((date) => date.getHours() > 5, {
+				message: "'startTime' must be after 6:00.",
 			})
-			.refine((date) => date.getHours() <= 22, {
-				message: "'startTime' must be at or before 22:00.",
+			.refine((date) => date.getHours() < 23, {
+				message: "'startTime' must be before 22:00.",
 			}),
 		endTime: dateTimeSchema
 			.refine((date) => date.getTime() > Date.now(), {
 				message: "'endTime' must be a future date.",
 			})
-			.refine((date) => date.getHours() >= 6, {
-				message: "'endTime' must be at or after 6:00.",
+			.refine((date) => date.getHours() > 5, {
+				message: "'endTime' must be after 6:00.",
 			})
-			.refine((date) => date.getHours() <= 22, {
-				message: "'endTime' must be at or before 22:00.",
+			.refine((date) => date.getHours() < 23, {
+				message: "'endTime' must be before 22:00.",
 			}),
 	})
 	.refine((data) => data.endTime > data.startTime, {
@@ -73,7 +73,9 @@ export const createBookingSchema = z
 	})
 
 export const createApiKeySchema = z.object({
-	name: z.string({ required_error: "'name' is required and must be a valid string." }),
+	name: z
+		.string({ required_error: "'name' is required and must be a valid string." })
+		.min(3, 'Name must contain 3 or more characters'),
 })
 
 export const changePasswordSchema = z.object({
@@ -112,4 +114,11 @@ export const createDeviceSchema = z.object({
 	room: z
 		.string({ required_error: "'room' is required and must be a valid string." })
 		.max(32, 'Room name be less than 32 characters'),
+})
+
+export const updateDeviceSchema = z.object({
+	name: z.string().optional(),
+	description: z.string().optional(),
+	building: z.string().max(32, 'Building name be less than 32 characters').optional(),
+	room: z.string().max(32, 'Room name be less than 32 characters').optional(),
 })

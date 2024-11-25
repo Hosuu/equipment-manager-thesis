@@ -87,7 +87,7 @@ const FormField: FC<FormFieldProps> = ({ isPending, presist, label, response, ..
 						setErrorMessage(undefined)
 						setValue(e.target.value)
 					}}
-					className='bg-gray-100 w-full text-sm text-gray-800 px-4 py-3 rounded-md focus:outline-none ring-2 ring-transparent focus:ring-primary-500'
+					className='bg-gray-100 w-full text-sm text-gray-800 px-4 py-3 rounded-md focus:outline-none ring ring-transparent focus:ring-primary-500'
 					value={presist ? value : undefined}
 					{...props}
 				/>

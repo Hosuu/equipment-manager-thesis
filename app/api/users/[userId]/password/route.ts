@@ -18,7 +18,7 @@ const adminVariant = changePasswordSchema.extend({
 export const PUT = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
 		const body = await parseJsonBody(request)

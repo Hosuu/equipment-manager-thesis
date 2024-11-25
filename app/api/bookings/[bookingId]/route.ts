@@ -17,15 +17,22 @@ interface DynamicParams extends Record<string, string> {
 
 export const GET = auth(async function GET(request, { params }) {
 	try {
-		await authorizeApiEndpoint(request)
-		const { bookingId } = params as DynamicParams
+		const auth = await authorizeApiEndpoint(request)
+		const { bookingId } = (await params) as DynamicParams
+
+		const bookingUserId = await prisma.booking.findUnique({
+			where: { id: bookingId },
+			select: { userId: true },
+		})
+		if (!bookingUserId) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
+		await ensureAdminOrCertainUser(auth, bookingUserId.userId)
 
 		const booking = await prisma.booking.findUnique({
 			where: { id: bookingId },
 			select: {
 				id: true,
+				user: { select: { id: true, email: true, name: true } },
 				device: { select: { id: true, name: true, building: true, room: true } },
-				user: { select: { id: true, email: true } },
 				startTime: true,
 				endTime: true,
 				duration: true,
@@ -35,8 +42,8 @@ export const GET = auth(async function GET(request, { params }) {
 			},
 		})
 
-		if (booking) return NextResponse.json(booking, { status: 200 })
-		else return RESPONSES.SUCCESS.RESOURCE.FOUND('booking', booking)
+		if (booking) return RESPONSES.SUCCESS.RESOURCE.FOUND<DetailedBooking>('booking', booking)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -47,7 +54,7 @@ export const GET = auth(async function GET(request, { params }) {
 export const PUT = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { bookingId } = params as DynamicParams
+		const { bookingId } = (await params) as DynamicParams
 
 		const booking = await prisma.booking.findUnique({
 			where: { id: bookingId },
@@ -55,6 +62,8 @@ export const PUT = auth(async function (request, { params }) {
 		})
 		if (!booking) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
 		await ensureAdminOrCertainUser(auth, booking.userId)
+
+		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING
 
 		const body = await parseJsonBody(request)
 		const data = updateBookingSchema.parse(body)
@@ -64,7 +73,7 @@ export const PUT = auth(async function (request, { params }) {
 		const { deviceId, userId, endTime, startTime } = newData
 		if (endTime <= startTime) return RESPONSES.ERROR.DATA.INVALID_TIME_RANGE
 
-		const isAvailable = await isDeviceAvailable(deviceId, startTime, endTime)
+		const isAvailable = await isDeviceAvailable(deviceId, startTime, endTime, bookingId)
 		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE
 
 		const user = await prisma.user.findUnique({ where: { id: userId }, select: { monthlyLimit: true }}) //prettier-ignore
@@ -78,8 +87,8 @@ export const PUT = auth(async function (request, { params }) {
 			data: newData,
 			select: {
 				id: true,
+				user: { select: { id: true, email: true, name: true } },
 				device: { select: { id: true, name: true, building: true, room: true } },
-				user: { select: { id: true, email: true } },
 				startTime: true,
 				endTime: true,
 				duration: true,
@@ -88,7 +97,8 @@ export const PUT = auth(async function (request, { params }) {
 				isCanceled: true,
 			},
 		})
-		if (updatedBooking != null) return RESPONSES.SUCCESS.RESOURCE.UPDATED('booking', updatedBooking)
+		if (updatedBooking != null)
+			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedBooking>('booking', updatedBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -99,22 +109,23 @@ export const PUT = auth(async function (request, { params }) {
 export const DELETE = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { bookingId } = params as DynamicParams
+		const { bookingId } = (await params) as DynamicParams
 
 		const booking = await prisma.booking.findUnique({
 			where: { id: bookingId },
-			select: { userId: true },
+			select: { userId: true, startTime: true },
 		})
 		if (!booking) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
-
 		await ensureAdminOrCertainUser(auth, booking.userId)
+
+		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING
 
 		const deletedBooking = await prisma.booking.update({
 			where: { id: bookingId },
 			data: { isCanceled: true },
 			select: { id: true },
 		})
-		return RESPONSES.SUCCESS.RESOURCE.DELETED('booking', deletedBooking)
+		return RESPONSES.SUCCESS.RESOURCE.DELETED<DeletedId>('booking', deletedBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)

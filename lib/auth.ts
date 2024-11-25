@@ -2,6 +2,7 @@ import bcrypt, { hashSync } from 'bcryptjs'
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import prisma from './db'
+import { makeSureTimePassedSince } from './utils'
 
 export const hashPasword = (password: string) => hashSync(password, 10)
 
@@ -35,7 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 				if (!credentials || !credentials.email || !credentials.password) return null
 
 				const email = credentials.email as string
-
+				const startTimeStamp = performance.now()
 				try {
 					const user = await prisma.user.findUnique({
 						where: { email },
@@ -45,9 +46,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					if (user && bcrypt.compareSync(credentials.password as string, user.hashedPassword))
 						return user
 
+					await makeSureTimePassedSince(2000, startTimeStamp)
 					return null
 				} catch (error) {
-					if (error instanceof Error) console.log(error.message)
+					if (error instanceof Error) console.error(error.message)
 					return null
 				}
 			},

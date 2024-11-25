@@ -1,3 +1,10 @@
+import { PageSection } from '@/components/PageSection'
+import { DevicesTable } from '@/components/table/DeviceTable'
+
 export default function Home() {
-	return <div>PRZYRZADY</div>
+	return (
+		<PageSection label='Lista przyrządów'>
+			<DevicesTable />
+		</PageSection>
+	)
 }

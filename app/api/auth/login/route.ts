@@ -18,7 +18,7 @@ export const POST = auth(async function (request) {
 			where: { email },
 			select: { id: true, email: true, name: true },
 		})
-		return RESPONSES.SUCCESS.AUTH.LOGIN(user)
+		return RESPONSES.SUCCESS.AUTH.LOGIN<BasicUser>(user!)
 	} catch (error) {
 		if (isRedirectError(error)) throw error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)

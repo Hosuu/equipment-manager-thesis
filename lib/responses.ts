@@ -3,7 +3,7 @@ import { ZodError } from 'zod'
 
 const cappitalFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
 
-interface Pagination {
+export interface Pagination {
 	page: number
 	limit: number
 	totalPages: number
@@ -13,7 +13,7 @@ interface Pagination {
 export const RESPONSES = {
 	SUCCESS: {
 		RESOURCE: {
-			CREATED: (resourceName: string, data: unknown) =>
+			CREATED: <T>(resourceName: string, data: T) =>
 				NextResponse.json(
 					{
 						message: `${cappitalFirst(resourceName)} created successfully.`,
@@ -23,37 +23,37 @@ export const RESPONSES = {
 					{ status: 201 }
 				),
 
-			UPDATED: (resourceName: string, data: unknown) =>
+			UPDATED: <T>(resourceName: string, data: T) =>
 				NextResponse.json(
 					{
 						message: `${cappitalFirst(resourceName)} updated successfully.`,
 						data,
 						code: `${resourceName.toUpperCase()}_UPDATED`,
 					},
-					{ status: 201 }
+					{ status: 200 }
 				),
 
-			DELETED: (resourceName: string, data: unknown) =>
+			DELETED: <T>(resourceName: string, data: T) =>
 				NextResponse.json(
 					{
 						message: `${cappitalFirst(resourceName)} deleted successfully.`,
 						data,
 						code: `${resourceName.toUpperCase()}_DELETED`,
 					},
-					{ status: 201 }
+					{ status: 200 }
 				),
 
-			FOUND: (resourceName: string, data: unknown) =>
+			FOUND: <T>(resourceName: string, data: T) =>
 				NextResponse.json(
 					{
 						message: `${cappitalFirst(resourceName)} retrived successfully.`,
 						data,
 						code: `${resourceName.toUpperCase()}_FOUND`,
 					},
-					{ status: 201 }
+					{ status: 200 }
 				),
 
-			MANY_RETRIEVED: (resourceName: string, data: unknown, pagination: Pagination) =>
+			MANY_RETRIEVED: <T>(resourceName: string, data: T, pagination: Pagination) =>
 				NextResponse.json(
 					{
 						message: `${cappitalFirst(resourceName)}s retrieved successfully.`,
@@ -66,7 +66,7 @@ export const RESPONSES = {
 		},
 
 		AUTH: {
-			LOGIN: (data: unknown) =>
+			LOGIN: <T>(data: T) =>
 				NextResponse.json(
 					{
 						message: 'Login successful.',
@@ -92,7 +92,7 @@ export const RESPONSES = {
 				{ status: 200 }
 			),
 
-			SELF_USER_DATA_RETRIEVED: (data: unknown) =>
+			SELF_USER_DATA_RETRIEVED: <T>(data: T) =>
 				NextResponse.json(
 					{
 						message: 'User data retrieved successfully.',
@@ -102,6 +102,16 @@ export const RESPONSES = {
 					{ status: 200 }
 				),
 		},
+
+		AVAILABILITY: (data: unknown) =>
+			NextResponse.json(
+				{
+					message: `Availability time ranges retrieved successfully.`,
+					data,
+					code: `AVAILABILITY_TIME_RANGES_RETRIEVED`,
+				},
+				{ status: 200 }
+			),
 	},
 	ERROR: {
 		RESOURCE_NOT_FOUND: (resourceName: string) =>
@@ -111,7 +121,7 @@ export const RESPONSES = {
 					message: `No ${resourceName} found with the specified ID. Please verify the ID and try again.`,
 					code: `${resourceName.toUpperCase()}_NOT_FOUND`,
 				},
-				{ status: 201 }
+				{ status: 404 }
 			),
 
 		DEVICE_UNAVAILABLE: NextResponse.json(
@@ -131,6 +141,16 @@ export const RESPONSES = {
 				code: 'MONTHLY_LIMIT_EXCEEDED',
 			},
 			{ status: 403 }
+		),
+
+		COMPLETED_BOOKING: NextResponse.json(
+			{
+				error: 'Action Not Allowed',
+				message:
+					'The booking has already been completed and cannot be updated or deleted. Please contact support if you have further concerns.',
+				code: 'COMPLETED_BOOKING_ERROR',
+			},
+			{ status: 400 }
 		),
 
 		AUTH: {

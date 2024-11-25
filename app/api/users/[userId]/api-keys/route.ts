@@ -20,19 +20,30 @@ interface DynamicParams extends Record<string, string> {
 export const GET = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
+		const query = request.nextUrl.searchParams.get('query') ?? undefined
 		const { limit, offset, page } = getPaginationParams(request)
-		const totalCount = await prisma.apiKey.count({ where: { userId: auth.id } })
+		const totalCount = await prisma.apiKey.count({
+			where: { userId: auth.id, name: { contains: query, mode: 'insensitive' } },
+		})
 		const totalPages = Math.ceil(totalCount / limit)
 		const apikeys = await prisma.apiKey.findMany({
 			skip: offset,
 			take: limit,
-			where: { userId: auth.id },
-			select: { id: true, name: true, hits: true, lastUsed: true, createdAt: true },
+			where: { userId: auth.id, name: { contains: query, mode: 'insensitive' } },
+			select: {
+				id: true,
+				name: true,
+				hits: true,
+				lastUsed: true,
+				createdAt: true,
+				isRevoked: true,
+			},
+			orderBy: { createdAt: 'desc' },
 		})
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('API-key', apikeys, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<ApiKey[]>('API-key', apikeys, {
 			limit,
 			page,
 			totalCount,
@@ -48,19 +59,26 @@ export const GET = auth(async function (request, { params }) {
 export const POST = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
-		const body = parseJsonBody(request)
+		const body = await parseJsonBody(request)
 		const { name } = createApiKeySchema.parse(body)
 		const key = randomBytes(48).toString('base64')
 		const keyHash = generateApiKeyHash(key)
 
 		const apiKey = await prisma.apiKey.create({
 			data: { keyHash, name, userId },
-			select: { name: true },
+			select: {
+				id: true,
+				name: true,
+				hits: true,
+				lastUsed: true,
+				createdAt: true,
+				isRevoked: true,
+			},
 		})
-		return RESPONSES.SUCCESS.RESOURCE.CREATED('API-key', { key, ...apiKey })
+		return RESPONSES.SUCCESS.RESOURCE.CREATED<CreatedApiKey>('API-key', { key, ...apiKey })
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)

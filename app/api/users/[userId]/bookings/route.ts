@@ -11,24 +11,44 @@ interface DynamicParams extends Record<string, string> {
 export const GET = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
+		const deviceId = request.nextUrl.searchParams.get('deviceId') ?? undefined
+		const startDate = request.nextUrl.searchParams.get('startDate') ?? undefined
+		const endDate = request.nextUrl.searchParams.get('endDate') ?? undefined
 		const { limit, offset, page } = getPaginationParams(request)
-		const totalCount = await prisma.booking.count({ where: { userId: auth.id } })
+		const totalCount = await prisma.booking.count({
+			where: {
+				userId: auth.id,
+				deviceId,
+				startTime: { lte: endDate },
+				endTime: { gte: startDate },
+			},
+		})
 		const totalPages = Math.ceil(totalCount / limit)
 		const bookings = await prisma.booking.findMany({
 			skip: offset,
 			take: limit,
-			where: { userId: auth.id },
+			where: {
+				userId: auth.id,
+				deviceId,
+				startTime: { lte: endDate },
+				endTime: { gte: startDate },
+			},
 			select: {
 				id: true,
 				device: { select: { id: true, name: true, building: true, room: true } },
+				user: { select: { id: true, name: true, email: true } },
 				startTime: true,
 				endTime: true,
+				isCanceled: true,
+			},
+			orderBy: {
+				startTime: 'asc',
 			},
 		})
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED('booking', bookings, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<BasicBooking[]>('booking', bookings, {
 			limit,
 			page,
 			totalCount,

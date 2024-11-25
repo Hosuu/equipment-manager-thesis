@@ -13,15 +13,15 @@ export const GET = auth(async function (request) {
 			where: { id: auth.id },
 			select: {
 				id: true,
-				name: true,
 				email: true,
+				name: true,
+				role: true,
 				monthlyLimit: true,
 				createdAt: true,
 				updatedAt: true,
-				apiKeys: { select: { id: true, name: true } },
 			},
 		})
-		return RESPONSES.SUCCESS.AUTH.SELF_USER_DATA_RETRIEVED(userData)
+		return RESPONSES.SUCCESS.AUTH.SELF_USER_DATA_RETRIEVED<DetailedUser>(userData)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -39,11 +39,15 @@ export const PUT = auth(async function (request) {
 			data: { name },
 			select: {
 				id: true,
-				name: true,
 				email: true,
+				name: true,
+				role: true,
+				monthlyLimit: true,
+				createdAt: true,
+				updatedAt: true,
 			},
 		})
-		return RESPONSES.SUCCESS.RESOURCE.UPDATED('user', updatedUser)
+		return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedUser>('user', updatedUser)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)

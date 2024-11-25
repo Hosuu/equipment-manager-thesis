@@ -1,6 +1,8 @@
 import { authorizeApiEndpoint, parseJsonBody } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { RESPONSES } from '@/lib/responses'
+import { updateDeviceSchema } from '@/lib/zod'
 import { Role } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
@@ -8,12 +10,13 @@ interface DynamicParams extends Record<string, string> {
 	deviceId: string
 }
 
-export const GET = auth(async function (request, { params }) {
+export const GET = auth(async function GET(request, { params }) {
 	try {
 		await authorizeApiEndpoint(request)
-		const { deviceId } = params as DynamicParams
+		const { deivceId } = (await params) as DynamicParams
+
 		const device = await prisma.device.findUnique({
-			where: { id: deviceId },
+			where: { id: deivceId },
 			select: {
 				id: true,
 				name: true,
@@ -24,36 +27,36 @@ export const GET = auth(async function (request, { params }) {
 				createdAt: true,
 			},
 		})
-		return NextResponse.json(device, { status: 200 })
+
+		if (device) return RESPONSES.SUCCESS.RESOURCE.FOUND<DetailedDevice>('deivce', device)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('deivce')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })
-
-function parseBodyData(body: Record<string, string>) {
-	const output: Record<string, string> = {}
-	if ('name' in body) output.name = body.name
-	if ('description' in body) output.name = body.description
-	if ('building' in body) output.name = body.building
-	if ('room' in body) output.name = body.room
-	return output
-}
 
 export const PUT = auth(async function (request, { params }) {
 	try {
 		await authorizeApiEndpoint(request, Role.ADMIN)
-		const { deviceId } = params as DynamicParams
-		const body = await parseJsonBody(request)
-		const data = parseBodyData(body)
+		const { deviceId } = (await params) as DynamicParams
 
-		if (Object.keys(data).length === 0)
-			return NextResponse.json({ message: 'No data provided' }, { status: 400 })
+		const device = await prisma.device.findUnique({
+			where: { id: deviceId },
+			select: { name: true, description: true, building: true, room: true },
+		})
+		if (!device) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('device')
+
+		const body = await parseJsonBody(request)
+		const data = updateDeviceSchema.parse(body)
+		if (Object.keys(data).length === 0) return RESPONSES.ERROR.DATA.NOT_PROVIDED
+
+		const newData = { ...device, ...data }
 
 		const updatedDevice = await prisma.device.update({
 			where: { id: deviceId },
-			data,
+			data: newData,
 			select: {
 				id: true,
 				name: true,
@@ -64,25 +67,34 @@ export const PUT = auth(async function (request, { params }) {
 				createdAt: true,
 			},
 		})
-		if (updatedDevice != null) return NextResponse.json(updatedDevice, { status: 200 })
-		else return NextResponse.json({ message: 'No Device found with specified ID' }, { status: 400 })
+		if (updatedDevice != null)
+			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedDevice>('device', updatedDevice)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })
 
 export const DELETE = auth(async function (request, { params }) {
 	try {
 		await authorizeApiEndpoint(request, Role.ADMIN)
-		const { deviceId } = params as DynamicParams
-		const deletedDevice = await prisma.device.delete({ where: { id: deviceId } })
-		if (deletedDevice != null) return NextResponse.json({ message: 'Successful' }, { status: 200 })
-		else return NextResponse.json({ message: 'No Device found with specified ID' }, { status: 400 })
+		const { deviceId } = (await params) as DynamicParams
+
+		const device = await prisma.device.findUnique({
+			where: { id: deviceId },
+			select: { id: true },
+		})
+		if (!device) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('device')
+
+		const deletedDevice = await prisma.device.delete({
+			where: { id: deviceId },
+			select: { id: true },
+		})
+		return RESPONSES.SUCCESS.RESOURCE.DELETED('device', deletedDevice)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return NextResponse.json({ message: 'Unexpected error occured' }, { status: 500 })
+		return RESPONSES.ERROR.UNEXPECTED
 	}
 })

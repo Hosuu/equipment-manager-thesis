@@ -13,7 +13,7 @@ interface DynamicParams extends Record<string, string> {
 export const GET = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
 		const user = await prisma.user.findUnique({
@@ -29,7 +29,8 @@ export const GET = auth(async function (request, { params }) {
 			},
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.FOUND('user', user)
+		if (user) return RESPONSES.SUCCESS.RESOURCE.FOUND<DetailedUser>('user', user)
+		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -40,7 +41,7 @@ export const GET = auth(async function (request, { params }) {
 export const PUT = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
 		const body = await parseJsonBody(request)
@@ -59,7 +60,8 @@ export const PUT = auth(async function (request, { params }) {
 				updatedAt: true,
 			},
 		})
-		if (updatedUser != null) return RESPONSES.SUCCESS.RESOURCE.UPDATED('user', updatedUser)
+		if (updatedUser != null)
+			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedUser>('user', updatedUser)
 		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
@@ -72,11 +74,12 @@ export const PUT = auth(async function (request, { params }) {
 export const DELETE = auth(async function (request, { params }) {
 	try {
 		const auth = await authorizeApiEndpoint(request)
-		const { userId } = params as DynamicParams
+		const { userId } = (await params) as DynamicParams
 		ensureAdminOrCertainUser(auth, userId)
 
 		const deletedUser = await prisma.user.delete({ where: { id: userId }, select: { id: true } })
-		if (deletedUser != null) return RESPONSES.SUCCESS.RESOURCE.DELETED('user', deletedUser)
+		if (deletedUser != null)
+			return RESPONSES.SUCCESS.RESOURCE.DELETED<DeletedId>('user', deletedUser)
 		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error

@@ -11,9 +11,15 @@ export function generateApiKeyHash(key: string) {
 		.digest('base64')
 }
 
-export async function isDeviceAvailable(deviceId: string, startTime: Date, endTime: Date) {
+export async function isDeviceAvailable(
+	deviceId: string,
+	startTime: Date,
+	endTime: Date,
+	excludeBookingId?: string
+) {
 	const deviceConcurentReservations = await prisma.booking.count({
 		where: {
+			id: { not: excludeBookingId },
 			endTime: { gte: startTime },
 			startTime: { lte: endTime },
 			deviceId: deviceId,
@@ -34,9 +40,7 @@ export async function parseJsonBody(request: NextAuthRequest) {
 }
 
 async function verifyApiKey(key: string) {
-	console.log(key)
 	const keyHash = generateApiKeyHash(key)
-	console.log(keyHash)
 	const data = await prisma.apiKey.findUnique({
 		where: { keyHash, isRevoked: false },
 		select: { id: true, user: { select: { id: true, role: true } } },

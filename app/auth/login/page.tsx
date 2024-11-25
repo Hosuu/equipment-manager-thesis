@@ -2,6 +2,8 @@ import { SignInForm } from '@/components/signInForm'
 import Image from 'next/image'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function Page() {
 	return (
 		<div className='min-h-screen grid place-items-center py-6 px-4'>
@@ -37,7 +39,7 @@ export default async function Page() {
 						Sprawdź
 						<Link
 							className='text-primary-600 font-semibold hover:underline ml-1'
-							href='/api'
+							href='/api-docs'
 						>
 							dokumentację API
 						</Link>

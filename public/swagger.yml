@@ -1,0 +1,2360 @@
+openapi: "3.0.3"
+info:
+  title: "System Zarządzania Dostępem do Aparatury Naukowej"
+  description: |
+    System zarządzania czasem dostępu do aparatury naukowej pozwala na efektywne rezerwowanie urządzeń, monitorowanie dostępności oraz zarządzanie użytkownikami.
+    Użytkownicy mogą rezerwować czas na urządzenia, sprawdzać dostępność w określonych terminach, a administratorzy mają możliwość zarządzania użytkownikami i kontrolowania zasobów.
+    System wspiera przydzielanie czasu dostępu do aparatury, zarządzanie limitami użytkowników oraz generowanie raportów z wykorzystania urządzeń.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:3000/api
+
+tags:
+  - name: "Users"
+    description: "Zarządzanie użytkownikami systemu"
+  - name: "Self"
+    description: "Zarządzanie akutlanie zalogowanym użytkownikiem"
+  - name: "Bookings"
+    description: "Rezerwacja czasu dostępu do aparatury"
+  - name: "Devices"
+    description: "Zarządzanie aparaturą naukową"
+
+paths:
+  /auth/login:
+    post:
+      summary: "User login"
+      description: "Authenticates the user using their credentials and sets a cookie on success."
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/LOGIN_SUCCESS"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - Incorrect email or password."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/INVALID_CREDENTIALS"
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /auth/logout:
+    post:
+      summary: "User logout"
+      description: "Signs the user out and clears their authentication cookie."
+      tags:
+        - Auth
+      responses:
+        200:
+          $ref: "#/components/responses/LOGOUT_SUCCESS"
+
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /bookings:
+    get:
+      summary: "Retrieve Bookings"
+      description: "Fetches a list of bookings. Supports filtering by various parameters such as device ID, user ID, and date range."
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/deviceId"
+        - $ref: "#/components/parameters/userId"
+        - $ref: "#/components/parameters/startDate"
+        - $ref: "#/components/parameters/endDate"
+      tags:
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKINGS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - User not authenticated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    post:
+      summary: "Create Booking"
+      description: "Creates a new booking. Requires authentication and validates input."
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKING_CREATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+        401:
+          description: "Unauthorized - User not authenticated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/MONTHLY_LIMIT_EXCEEDED"
+
+        404:
+          description: "Not Found - User or Device not found."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/USER_NOT_FOUND"
+                  - $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+        409:
+          $ref: "#/components/responses/DEVICE_UNAVAILABLE"
+
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /bookings/{bookingId}:
+    get:
+      summary: "Retrieve details of specific Booking"
+      description: "Fetches details of a specific booking using the booking ID."
+      parameters:
+        - $ref: "#/components/parameters/bookingIdRoute"
+      tags:
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKING_FOUND"
+
+        401:
+          description: "Unauthorized - User not authenticated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - Booking not found."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BOOKING_NOT_FOUND"
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    put:
+      summary: "Update details of specific Booking"
+      description: "Updates the details of a specific booking. The request must include a valid booking ID and required fields."
+      parameters:
+        - $ref: "#/components/parameters/bookingIdRoute"
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBookingRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKING_UPDATED"
+
+        400:
+          description: "Bad Request - The input data is invalid or improperly formatted."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+                  - $ref: "#/components/schemas/INVALID_TIME_RANGE"
+
+        401:
+          description: "Unauthorized - The user is not authenticated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/MONTHLY_LIMIT_EXCEEDED"
+
+        404:
+          description: "Not Found - The specified booking does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BOOKING_NOT_FOUND"
+
+        409:
+          $ref: "#/components/responses/DEVICE_UNAVAILABLE"
+
+        500:
+          description: "Internal Server Error - Unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    delete:
+      summary: "Delete specific Booking"
+      description: "Deletes a specific booking identified by its ID."
+      parameters:
+        - $ref: "#/components/parameters/bookingIdRoute"
+      tags:
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKING_DELETED"
+
+        401:
+          description: "Unauthorized - The user is not authenticated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The specified booking does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BOOKING_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected error occurred."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /devices:
+    get:
+      summary: "Retrieve Devices"
+      description: "Fetches a paginated list of devices. Supports optional filtering by device ID or user ID."
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/deviceId"
+        - $ref: "#/components/parameters/userId"
+      tags:
+        - Devices
+      responses:
+        200:
+          $ref: "#/components/responses/DEVICES_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    post:
+      summary: "Create Device"
+      description: "Allows an authorized user to create a new device by providing the necessary details in the request body."
+      tags:
+        - Devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeviceRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/DEVICE_CREATED"
+
+        400:
+          description: "Bad Request - The input data is invalid, missing, or improperly formatted."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /devices/{deviceId}:
+    get:
+      summary: "Retrieve details of a specific device"
+      description: "Fetches detailed information about a specific device using its ID."
+      parameters:
+        - $ref: "#/components/parameters/deviceIdRoute"
+      tags:
+        - Devices
+      responses:
+        200:
+          $ref: "#/components/responses/DEVICE_FOUND"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Device Not Found - No device exists with the provided ID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    put:
+      summary: "Update details of a specific device"
+      description: "Updates information for an existing device by its ID. Requires valid input data in the request body."
+      parameters:
+        - $ref: "#/components/parameters/deviceIdRoute"
+      tags:
+        - Devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeviceRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/DEVICE_UPDATED"
+
+        400:
+          description: "Bad Request - The input data is invalid, missing, or improperly formatted."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Device Not Found - No device exists with the provided ID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    delete:
+      summary: "Delete a specific device"
+      description: "Deletes an existing device by its ID. Requires appropriate permissions."
+      parameters:
+        - $ref: "#/components/parameters/deviceIdRoute"
+      tags:
+        - Devices
+      responses:
+        200:
+          $ref: "#/components/responses/DEVICE_DELETED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Device Not Found - No device exists with the provided ID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /devices/{deviceId}/availability:
+    get:
+      summary: "Retrieve availability time ranges for a specific device"
+      description: "Fetches the available time ranges for a specific device within a specified date range. Requires user authentication."
+      parameters:
+        - $ref: "#/components/parameters/deviceIdRoute"
+        - $ref: "#/components/parameters/startDate"
+        - $ref: "#/components/parameters/endDate"
+      tags:
+        - Devices
+      responses:
+        200:
+          $ref: "#/components/responses/AVAILABILITY_TIME_RANGES_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Device Not Found - No device exists with the provided ID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /devices/{deviceId}/bookings:
+    get:
+      summary: "Retrieve bookings for a specific device"
+      description: "Fetches a paginated list of bookings for a specific device within an optional date range and with optional filters for the user ID. Requires user authentication."
+      parameters:
+        - $ref: "#/components/parameters/deviceIdRoute"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/userId"
+        - $ref: "#/components/parameters/startDate"
+        - $ref: "#/components/parameters/endDate"
+      tags:
+        - Devices
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKINGS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Device Not Found - No device exists with the provided ID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DEVICE_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /me:
+    get:
+      summary: "Retrieve user data for the authenticated user"
+      description: "Fetches the authenticated user's information. Requires the user to be authenticated."
+      tags:
+        - Self
+      responses:
+        200:
+          $ref: "#/components/responses/USER_DATA_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    put:
+      summary: "Update the authenticated user's data"
+      description: "Allows the authenticated user to update their personal information, such as their username. Requires the user to be authenticated."
+      tags:
+        - Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserNameRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/USER_UPDATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /me/password:
+    put:
+      summary: "Change the authenticated user's password"
+      description: "Allows the authenticated user to change their password. Requires the user to be authenticated and input the current password."
+      tags:
+        - Self
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/PASSWORD_CHANGED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated or the current password is incorrect."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+                  - $ref: "#/components/schemas/INVALID_CURRENT_PASSWORD"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /me/bookings:
+    get:
+      summary: "Retrieve bookings for the authenticated user"
+      description: "Fetches a paginated list of bookings made by the authenticated user. Supports filtering by various parameters, including device ID and date range."
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/deviceId"
+        - $ref: "#/components/parameters/startDate"
+        - $ref: "#/components/parameters/endDate"
+      tags:
+        - Self
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKINGS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /me/api-keys:
+    get:
+      summary: "Retrieve API keys for the authenticated user"
+      description: "Fetches a paginated list of API keys associated with the authenticated user. Supports filtering by query parameters."
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/query"
+      tags:
+        - Self
+        - API-keys
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEYS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    post:
+      summary: "Create a new API key for the authenticated user"
+      description: "Generates a new API key for the authenticated user. The user must be authenticated."
+      tags:
+        - Self
+        - API-keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEY_CREATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /me/api-keys/{keyId}:
+    delete:
+      summary: "Delete a specific API key for the authenticated user"
+      description: "Deletes an API key associated with the authenticated user. The user must be authenticated, and the API key must exist."
+      parameters:
+        - $ref: "#/components/parameters/keyIdRoute"
+      tags:
+        - Self
+        - API-keys
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEY_DELETED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Not Found - The specified API key does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKEY_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users:
+    get:
+      summary: "Retrieve Users"
+      description: "Fetches a list of users, supporting pagination and filtering by query parameters. The user must be authenticated with sufficient permissions to access this endpoint."
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/query"
+      tags:
+        - Users
+      responses:
+        200:
+          $ref: "#/components/responses/USERS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    post:
+      summary: "Create a new user"
+      description: "Creates a new user in the system. The user must be authenticated and have sufficient permissions to create a new user."
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/USER_CREATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        409:
+          $ref: "#/components/responses/EMAIL_ALREADY_REGISTERED"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users/{userId}:
+    get:
+      summary: "Retrieve a specific user"
+      description: "Fetches details of a specific user identified by the provided user ID. The user must be authenticated and have sufficient permissions to access this endpoint."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+      tags:
+        - Users
+      responses:
+        200:
+          $ref: "#/components/responses/USER_FOUND"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    put:
+      summary: "Update a specific user"
+      description: "Updates details of a specific user identified by the provided user ID. The user must be authenticated and have sufficient permissions to update the user."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserNameRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/USER_UPDATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    delete:
+      summary: "Delete a specific user"
+      description: "Deletes a specific user identified by the provided user ID. The user must be authenticated and have sufficient permissions to delete the user."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+      tags:
+        - Users
+      responses:
+        200:
+          $ref: "#/components/responses/USER_DELETED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+        500:
+          description: "Internal Server Error - An unexpected issue occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users/{userId}/password:
+    put:
+      summary: "Change User's Password"
+      description: "Allows an authenticated user to change their own password. The request must include the current password and the new password. The user must be authorized to perform this action."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/PASSWORD_CHANGED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated, and the current password must be correct."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+                  - $ref: "#/components/schemas/INVALID_CURRENT_PASSWORD"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "User not found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected error occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users/{userId}/bookings:
+    get:
+      summary: "Retrieve Bookings for a Specific User"
+      description: "Fetches a list of bookings for a specific user. The user must be authenticated and have sufficient permissions to view this data. Supports pagination and optional filters based on device and date range."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/deviceId"
+        - $ref: "#/components/parameters/startDate"
+        - $ref: "#/components/parameters/endDate"
+      tags:
+        - Users
+        - Bookings
+      responses:
+        200:
+          $ref: "#/components/responses/BOOKINGS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected error occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users/{userId}/api-keys:
+    get:
+      summary: "Retrieve API Keys for a Specific User"
+      description: "Fetches a list of API keys for a specific user. The user must be authenticated and have sufficient permissions to view this data. Supports pagination and optional filters."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/query"
+      tags:
+        - User
+        - API-keys
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEYS_RETRIEVED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected error occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+    post:
+      summary: "Create an API Key for a Specific User"
+      description: "Generates a new API key for the user. The user must be authenticated and have sufficient permissions to create API keys."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+      tags:
+        - Users
+        - API-keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEY_CREATED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to access this endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+        403:
+          $ref: "#/components/responses/INSUFFICIENT_PERMISSIONS"
+
+        404:
+          description: "Not Found - The user with the specified ID does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected error occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+  /users/{userId}/api-keys/{keyId}:
+    delete:
+      summary: "Delete a Specific API Key for a User"
+      description: "Deletes an API key associated with a specific user. The user must be authenticated and have sufficient permissions to delete an API key."
+      parameters:
+        - $ref: "#/components/parameters/userIdRoute"
+        - $ref: "#/components/parameters/keyIdRoute"
+      tags:
+        - User
+        - API-keys
+      responses:
+        200:
+          $ref: "#/components/responses/APIKEY_DELETED"
+
+        400:
+          description: "Bad Request - Invalid input or JSON"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/INVALID_DATA"
+                  - $ref: "#/components/schemas/INVALID_JSON_BODY"
+                  - $ref: "#/components/schemas/NO_DATA_PROVIDED"
+
+        401:
+          description: "Unauthorized - The user must be authenticated to perform this action."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/USER_NOT_AUTHENTICATED"
+
+        404:
+          description: "Not Found - The specified user or API key does not exist."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/USER_NOT_FOUND"
+                  - $ref: "#/components/schemas/APIKEY_NOT_FOUND"
+
+        500:
+          description: "Internal Server Error - An unexpected error occurred while processing the request."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UNEXPECTED_ERROR"
+
+components:
+  parameters:
+    page:
+      name: page
+      in: query
+      description: "The page number to retrieve."
+      required: false
+      schema:
+        type: integer
+        example: 1
+
+    limit:
+      name: limit
+      in: query
+      description: "The number of results per page."
+      required: false
+      schema:
+        type: integer
+        example: 10
+
+    deviceId:
+      name: deviceId
+      in: query
+      description: "Filter for specific deviceId."
+      required: false
+      schema:
+        type: string
+        example: abc123
+
+    deviceIdRoute:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: abc123
+
+    keyIdRoute:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: abc123
+
+    userId:
+      name: userId
+      in: query
+      description: "Filter for specific userId."
+      required: false
+      schema:
+        type: string
+        example: abc123
+
+    userIdRoute:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: abc123
+
+    bookingIdRoute:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: abc123
+
+    query:
+      name: query
+      in: query
+      description: "Filter for similiar names"
+      required: false
+      schema:
+        type: string
+
+    startDate:
+      name: startDate
+      in: query
+      description: "Filter for records after specified date"
+      required: false
+      schema:
+        type: string
+        example: 2024-11-25T17:00:00.180Z
+
+    endDate:
+      name: endDate
+      in: query
+      description: "Filter for records before specified date"
+      required: false
+      schema:
+        type: string
+        example: 2024-11-28T17:00:00.180Z
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          description: "The email address of the user."
+          example: "user@pwr.edu.pl"
+        password:
+          type: string
+          description: "The password of the user."
+          example: "securePassword123"
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          description: "The start time for the booking (must be in the future and between 06:00 and 22:00)."
+        endTime:
+          type: string
+          format: date-time
+          description: "The end time for the booking (must be in the future and between 06:00 and 22:00)."
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - userId
+        - deviceId
+        - startTime
+        - endTime
+      properties:
+        userId:
+          type: string
+          description: "The ID of the user making the booking."
+        deviceId:
+          type: string
+          description: "The ID of the device being booked."
+        startTime:
+          type: string
+          format: date-time
+          description: "The start time for the booking."
+        endTime:
+          type: string
+          format: date-time
+          description: "The end time for the booking."
+
+    CreateApiKeyRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: "The name of the API key."
+          minLength: 3
+          example: "MyNewApiKey"
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          description: "The current password of the user."
+        newPassword:
+          type: string
+          description: "The new password for the user."
+          minLength: 8
+          maxLength: 32
+
+    ChangeUserNameRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: "The new name of the user."
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - password
+        - role
+        - name
+      properties:
+        email:
+          type: string
+          description: "The email address of the user."
+          pattern: "^[a-zA-Z0-9._%+-]+@pwr.edu.pl$"
+        password:
+          type: string
+          description: "The password of the user."
+          minLength: 8
+          maxLength: 32
+        role:
+          type: string
+          enum:
+            - USER
+            - ADMIN
+          description: "The role of the user."
+        name:
+          type: string
+          description: "The name of the user."
+
+    CreateDeviceRequest:
+      type: object
+      required:
+        - name
+        - building
+        - room
+      properties:
+        name:
+          type: string
+          description: "The name of the device."
+        description:
+          type: string
+          description: "A description of the device."
+        building:
+          type: string
+          maxLength: 32
+          description: "The building where the device is located."
+        room:
+          type: string
+          maxLength: 32
+          description: "The room where the device is located."
+
+    UpdateDeviceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "The updated name of the device."
+        description:
+          type: string
+          description: "The updated description of the device."
+        building:
+          type: string
+          maxLength: 32
+          description: "The updated building location of the device."
+        room:
+          type: string
+          maxLength: 32
+          description: "The updated room location of the device."
+
+    BasicUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "12345"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "johndoe@example.com"
+
+    DetailedUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "12345"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "johndoe@example.com"
+        role:
+          type: string
+          enum: ["USER", "ADMIN"]
+          example: "ADMIN"
+        monthlyLimit:
+          type: integer
+          example: 100
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "abc123"
+        name:
+          type: string
+          example: "API Key 1"
+        hits:
+          type: integer
+          example: 100
+        lastUsed:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        isRevoked:
+          type: boolean
+          example: false
+
+    CreatedApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "abc123"
+        name:
+          type: string
+          example: "API Key 1"
+        key:
+          type: string
+          example: "generated_api_key_123"
+        hits:
+          type: integer
+          example: 100
+        lastUsed:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        isRevoked:
+          type: boolean
+          example: false
+
+    BasicDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "dev123"
+        name:
+          type: string
+          example: "Microscope 1"
+        building:
+          type: string
+          example: "Building A"
+        room:
+          type: string
+          example: "Room 101"
+
+    DetailedDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "dev123"
+        name:
+          type: string
+          example: "Microscope 1"
+        building:
+          type: string
+          example: "Building A"
+        room:
+          type: string
+          example: "Room 101"
+        description:
+          type: string
+          example: "A high-quality research microscope."
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+
+    AvailabilityTimeRange:
+      type: object
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T16:30:00Z"
+
+    BasicBooking:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "bkng123"
+        user:
+          $ref: "#/components/schemas/BasicUser"
+        device:
+          $ref: "#/components/schemas/BasicDevice"
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T16:30:00Z"
+        isCanceled:
+          type: boolean
+          example: false
+
+    DetailedBooking:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "bkng123"
+        user:
+          $ref: "#/components/schemas/BasicUser"
+        device:
+          $ref: "#/components/schemas/BasicDevice"
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2024-11-25T16:30:00Z"
+        isCanceled:
+          type: boolean
+          example: false
+        duration:
+          type: integer
+          example: 2
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-25T14:30:00Z"
+
+    DeletedId:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "abc123"
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalPages:
+          type: integer
+          example: 5
+        totalCount:
+          type: integer
+          example: 50
+
+    INVALID_JSON_BODY:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "The request body is not properly formatted as JSON. Please ensure the body is valid JSON."
+        code:
+          type: string
+          example: "INVALID_JSON_BODY"
+
+    INVALID_TIME_RANGE:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "The provided time range is invalid. The end time must be later than the start time."
+        code:
+          type: string
+          example: "INVALID_TIME_RANGE"
+
+    NO_DATA_PROVIDED:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "No data was provided in the request body. Please provide the necessary information and try again."
+        code:
+          type: string
+          example: "NO_DATA_PROVIDED"
+
+    INVALID_DATA:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "The request data is invalid or missing required fields. Please check the input and try again."
+        details:
+          type: array
+          description: "Detailed information about invalid fields."
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: "The name of the field that caused the validation error."
+                example: "email"
+              message:
+                type: string
+                description: "The error message for the invalid field."
+                example: "'email' is required and must be a valid string."
+        code:
+          type: string
+          example: "INVALID_DATA"
+
+    INVALID_CREDENTIALS:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+        message:
+          type: string
+          example: "Incorrect email or password. Please try again."
+        code:
+          type: string
+          example: "INVALID_CREDENTIALS"
+
+    INVALID_CURRENT_PASSWORD:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+        message:
+          type: string
+          example: "The current password is incorrect. Please try again with the correct password."
+        code:
+          type: string
+          example: "INVALID_CURRENT_PASSWORD"
+
+    USER_NOT_AUTHENTICATED:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+        message:
+          type: string
+          example: "Authentication is required to access this resource. Please log in and try again."
+        code:
+          type: string
+          example: "USER_NOT_AUTHENTICATED"
+
+    COMPLETED_BOOKING_ERROR:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Action Not Allowed"
+        message:
+          type: string
+          example: "The booking has already been completed and cannot be updated or deleted. Please contact support if you have further concerns."
+        code:
+          type: string
+          example: "COMPLETED_BOOKING_ERROR"
+
+    UNEXPECTED_ERROR:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Internal Server Error"
+        message:
+          type: string
+          example: "An unexpected error occurred. Please try again later or contact admin if the issue persists."
+        code:
+          type: string
+          example: "UNEXPECTED_ERROR"
+
+    USER_NOT_FOUND:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "No user found with the specified ID. Please verify the ID and try again."
+        code:
+          type: string
+          example: "USER_NOT_FOUND"
+
+    DEVICE_NOT_FOUND:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "No device found with the specified ID. Please verify the ID and try again."
+        code:
+          type: string
+          example: "DEVICE_NOT_FOUND"
+
+    BOOKING_NOT_FOUND:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "No booking found with the specified ID. Please verify the ID and try again."
+        code:
+          type: string
+          example: "BOOKING_NOT_FOUND"
+
+    APIKEY_NOT_FOUND:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "No API-key found with the specified ID. Please verify the ID and try again."
+        code:
+          type: string
+          example: "APIKEY_NOT_FOUND"
+
+  responses:
+    APIKEY_CREATED:
+      description: "API Key created successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "ApiKey created successfully."
+              data:
+                $ref: "#/components/schemas/CreatedApiKey"
+              code:
+                type: string
+                example: "APIKEY_CREATED"
+
+    APIKEY_UPDATED:
+      description: "API Key updated successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "ApiKey updated successfully."
+              data:
+                $ref: "#/components/schemas/ApiKey"
+              code:
+                type: string
+                example: "APIKEY_UPDATED"
+
+    APIKEY_DELETED:
+      description: "API Key deleted successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "ApiKey deleted successfully."
+              data:
+                $ref: "#/components/schemas/DeletedId"
+              code:
+                type: string
+                example: "APIKEY_DELETED"
+
+    APIKEY_FOUND:
+      description: "API Key retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "ApiKey retrieved successfully."
+              data:
+                $ref: "#/components/schemas/ApiKey"
+              code:
+                type: string
+                example: "APIKEY_FOUND"
+
+    APIKEYS_RETRIEVED:
+      description: "List of API Keys retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "API Keys retrieved successfully."
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+              pagination:
+                $ref: "#/components/schemas/Pagination"
+              code:
+                type: string
+                example: "APIKEYS_RETRIEVED"
+
+    USER_CREATED:
+      description: "User created successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User created successfully."
+              data:
+                $ref: "#/components/schemas/DetailedUser"
+              code:
+                type: string
+                example: "USER_CREATED"
+
+    USER_UPDATED:
+      description: "User updated successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User updated successfully."
+              data:
+                $ref: "#/components/schemas/DetailedUser"
+              code:
+                type: string
+                example: "USER_UPDATED"
+
+    USER_DELETED:
+      description: "User deleted successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User deleted successfully."
+              data:
+                $ref: "#/components/schemas/DeletedId"
+              code:
+                type: string
+                example: "USER_DELETED"
+
+    USER_FOUND:
+      description: "User retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User retrieved successfully."
+              data:
+                $ref: "#/components/schemas/DetailedUser"
+              code:
+                type: string
+                example: "USER_FOUND"
+
+    USERS_RETRIEVED:
+      description: "List of users retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Users retrieved successfully."
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DetailedUser"
+              pagination:
+                $ref: "#/components/schemas/Pagination"
+              code:
+                type: string
+                example: "USERS_RETRIEVED"
+
+    DEVICE_CREATED:
+      description: "Device created successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Device created successfully."
+              data:
+                $ref: "#/components/schemas/DetailedDevice"
+              code:
+                type: string
+                example: "DEVICE_CREATED"
+
+    DEVICE_UPDATED:
+      description: "Device updated successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Device updated successfully."
+              data:
+                $ref: "#/components/schemas/DetailedDevice"
+              code:
+                type: string
+                example: "DEVICE_UPDATED"
+
+    DEVICE_DELETED:
+      description: "Device deleted successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Device deleted successfully."
+              data:
+                $ref: "#/components/schemas/DeletedId"
+              code:
+                type: string
+                example: "DEVICE_DELETED"
+
+    DEVICE_FOUND:
+      description: "Device retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Device retrieved successfully."
+              data:
+                $ref: "#/components/schemas/DetailedDevice"
+              code:
+                type: string
+                example: "DEVICE_FOUND"
+
+    DEVICES_RETRIEVED:
+      description: "List of devices retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Devices retrieved successfully."
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DetailedDevice"
+              pagination:
+                $ref: "#/components/schemas/Pagination"
+              code:
+                type: string
+                example: "DEVICES_RETRIEVED"
+
+    BOOKING_CREATED:
+      description: "Booking created successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Booking created successfully."
+              data:
+                $ref: "#/components/schemas/DetailedBooking"
+              code:
+                type: string
+                example: "BOOKING_CREATED"
+
+    BOOKING_UPDATED:
+      description: "Booking updated successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Booking updated successfully."
+              data:
+                $ref: "#/components/schemas/DetailedBooking"
+              code:
+                type: string
+                example: "BOOKING_UPDATED"
+
+    BOOKING_DELETED:
+      description: "Booking deleted successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Booking deleted successfully."
+              data:
+                $ref: "#/components/schemas/DeletedId"
+              code:
+                type: string
+                example: "BOOKING_DELETED"
+
+    BOOKING_FOUND:
+      description: "Booking retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Booking retrieved successfully."
+              data:
+                $ref: "#/components/schemas/DetailedBooking"
+              code:
+                type: string
+                example: "BOOKING_FOUND"
+
+    BOOKINGS_RETRIEVED:
+      description: "List of bookings retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Bookings retrieved successfully."
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DetailedBooking"
+              pagination:
+                $ref: "#/components/schemas/Pagination"
+              code:
+                type: string
+                example: "BOOKINGS_RETRIEVED"
+
+    LOGIN_SUCCESS:
+      description: "Login successful."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Login successful."
+              data:
+                $ref: "#/components/schemas/BasicUser"
+              code:
+                type: string
+                example: "LOGIN_SUCCESS"
+
+    LOGOUT_SUCCESS:
+      description: "Logout successful."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Logout successful. You have been logged out successfully."
+              code:
+                type: string
+                example: "LOGOUT_SUCCESS"
+
+    PASSWORD_CHANGED:
+      description: "Password changed successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Password changed successfully."
+              code:
+                type: string
+                example: "PASSWORD_CHANGED"
+
+    USER_DATA_RETRIEVED:
+      description: "User data retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User data retrieved successfully."
+              data:
+                $ref: "#/components/schemas/DetailedUser"
+              code:
+                type: string
+                example: "USER_DATA_RETRIEVED"
+
+    AVAILABILITY_TIME_RANGES_RETRIEVED:
+      description: "Availability time ranges retrieved successfully."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Availability time ranges retrieved successfully."
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityTimeRange"
+              code:
+                type: string
+                example: "AVAILABILITY_TIME_RANGES_RETRIEVED"
+
+    #ERRORS
+    DEVICE_UNAVAILABLE:
+      description: "The device is already reserved during the specified time."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Conflict"
+              message:
+                type: string
+                example: "The selected device is already reserved during the specified time range. Please choose a different time or device."
+              code:
+                type: string
+                example: "DEVICE_UNAVAILABLE"
+
+    MONTHLY_LIMIT_EXCEEDED:
+      description: "User's monthly limit has been exceeded."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Limit Exceeded"
+              message:
+                type: string
+                example: "The user's monthly usage limit has been reached. Please try booking on a different day or adjust the booking duration."
+              code:
+                type: string
+                example: "MONTHLY_LIMIT_EXCEEDED"
+
+    INSUFFICIENT_PERMISSIONS:
+      description: "User does not have sufficient permissions."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Forbidden"
+              message:
+                type: string
+                example: "You do not have sufficient permissions to perform this action."
+              code:
+                type: string
+                example: "INSUFFICIENT_PERMISSIONS"
+
+    EMAIL_ALREADY_REGISTERED:
+      description: "The email is already registered."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Conflict"
+              message:
+                type: string
+                example: "An account with this email address already exists."
+              code:
+                type: string
+                example: "EMAIL_ALREADY_REGISTERED"
