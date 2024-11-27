@@ -90,6 +90,9 @@ paths:
         - $ref: "#/components/parameters/endDate"
       tags:
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKINGS_RETRIEVED"
@@ -112,6 +115,9 @@ paths:
       description: "Creates a new booking. Requires authentication and validates input."
       tags:
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -167,6 +173,9 @@ paths:
         - $ref: "#/components/parameters/bookingIdRoute"
       tags:
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKING_FOUND"
@@ -200,6 +209,9 @@ paths:
         - $ref: "#/components/parameters/bookingIdRoute"
       tags:
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -255,6 +267,9 @@ paths:
         - $ref: "#/components/parameters/bookingIdRoute"
       tags:
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKING_DELETED"
@@ -293,6 +308,9 @@ paths:
         - $ref: "#/components/parameters/userId"
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/DEVICES_RETRIEVED"
@@ -315,6 +333,9 @@ paths:
       description: "Allows an authorized user to create a new device by providing the necessary details in the request body."
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -360,6 +381,9 @@ paths:
         - $ref: "#/components/parameters/deviceIdRoute"
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/DEVICE_FOUND"
@@ -390,6 +414,9 @@ paths:
         - $ref: "#/components/parameters/deviceIdRoute"
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -441,6 +468,9 @@ paths:
         - $ref: "#/components/parameters/deviceIdRoute"
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/DEVICE_DELETED"
@@ -478,6 +508,9 @@ paths:
         - $ref: "#/components/parameters/endDate"
       tags:
         - Devices
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/AVAILABILITY_TIME_RANGES_RETRIEVED"
@@ -516,6 +549,9 @@ paths:
       tags:
         - Devices
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKINGS_RETRIEVED"
@@ -546,6 +582,9 @@ paths:
       description: "Fetches the authenticated user's information. Requires the user to be authenticated."
       tags:
         - Self
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/USER_DATA_RETRIEVED"
@@ -568,6 +607,9 @@ paths:
       description: "Allows the authenticated user to update their personal information, such as their username. Requires the user to be authenticated."
       tags:
         - Self
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -609,6 +651,9 @@ paths:
       description: "Allows the authenticated user to change their password. Requires the user to be authenticated and input the current password."
       tags:
         - Self
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -659,6 +704,9 @@ paths:
       tags:
         - Self
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKINGS_RETRIEVED"
@@ -688,6 +736,9 @@ paths:
       tags:
         - Self
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/APIKEYS_RETRIEVED"
@@ -711,6 +762,9 @@ paths:
       tags:
         - Self
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -754,6 +808,9 @@ paths:
       tags:
         - Self
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/APIKEY_DELETED"
@@ -799,6 +856,10 @@ paths:
         - $ref: "#/components/parameters/query"
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
+
       responses:
         200:
           $ref: "#/components/responses/USERS_RETRIEVED"
@@ -824,6 +885,9 @@ paths:
       description: "Creates a new user in the system. The user must be authenticated and have sufficient permissions to create a new user."
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -872,6 +936,9 @@ paths:
         - $ref: "#/components/parameters/userIdRoute"
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/USER_FOUND"
@@ -906,6 +973,9 @@ paths:
         - $ref: "#/components/parameters/userIdRoute"
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -957,6 +1027,9 @@ paths:
         - $ref: "#/components/parameters/userIdRoute"
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/USER_DELETED"
@@ -992,6 +1065,9 @@ paths:
         - $ref: "#/components/parameters/userIdRoute"
       tags:
         - Users
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -1053,6 +1129,9 @@ paths:
       tags:
         - Users
         - Bookings
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/BOOKINGS_RETRIEVED"
@@ -1093,6 +1172,9 @@ paths:
       tags:
         - User
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/APIKEYS_RETRIEVED"
@@ -1128,6 +1210,9 @@ paths:
       tags:
         - Users
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -1181,6 +1266,9 @@ paths:
       tags:
         - User
         - API-keys
+      security:
+        - ApiKeyHeader: []
+        - ApiKeyQuery: []
       responses:
         200:
           $ref: "#/components/responses/APIKEY_DELETED"
@@ -1219,6 +1307,17 @@ paths:
                 $ref: "#/components/schemas/UNEXPECTED_ERROR"
 
 components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: API_KEY
+
+    ApiKeyQuery:
+      type: apiKey
+      in: query
+      name: API_KEY
+
   parameters:
     page:
       name: page
@@ -1426,6 +1525,10 @@ components:
         name:
           type: string
           description: "The name of the user."
+        monthlyLimit:
+          type: number
+          description: "Monthly limit of hours."
+          default: 40
 
     CreateDeviceRequest:
       type: object

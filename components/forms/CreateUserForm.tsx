@@ -12,16 +12,23 @@ export const CreateUserForm: FC<CreateUserFormProps> = ({ onClose }) => {
 	const [email, setEmail] = useState<string>('')
 	const [password, setPassword] = useState<string>('')
 	const [role, setRole] = useState<string>('USER')
+	const [limit, setLimit] = useState<number>(40)
 
 	const [isPending, setIsPending] = useState<boolean>(false)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const [didSuccess, setDidSuccess] = useState(false)
 
-	const sendPostRequest = async (name: string, email: string, password: string, role: string) => {
+	const sendPostRequest = async (
+		name: string,
+		email: string,
+		password: string,
+		role: string,
+		monthlyLimit: number
+	) => {
 		setIsPending(true)
 		const response = await fetch(`/api/users`, {
 			method: 'POST',
-			body: JSON.stringify({ name, email, password, role }),
+			body: JSON.stringify({ name, email, password, role, monthlyLimit }),
 		})
 		const data = await response.json()
 		if (data.code === 'USER_CREATED') {
@@ -38,7 +45,7 @@ export const CreateUserForm: FC<CreateUserFormProps> = ({ onClose }) => {
 
 	const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
 		event.preventDefault()
-		sendPostRequest(name, email, password, role)
+		sendPostRequest(name, email, password, role, limit)
 	}
 
 	if (didSuccess)
@@ -98,6 +105,18 @@ export const CreateUserForm: FC<CreateUserFormProps> = ({ onClose }) => {
 						onChange={(e) => setRole(e.target.value)}
 						className='bg-gray-100 w-full text-sm text-gray-800 px-3 py-2 rounded-md focus:outline-none ring ring-transparent focus:ring-primary-500'
 						value={role}
+					/>
+				</div>
+
+				<div className='my-2'>
+					<label htmlFor='name' className='block mb-2 text-sm font-mediumtext-gray-100'>
+						Miesięczny limit godzin
+					</label>
+					<input
+						type='number'
+						onChange={(e) => setLimit(parseInt(e.target.value) || 0)}
+						className='bg-gray-100 w-full text-sm text-gray-800 px-3 py-2 rounded-md focus:outline-none ring ring-transparent focus:ring-primary-500'
+						value={limit}
 					/>
 				</div>
 

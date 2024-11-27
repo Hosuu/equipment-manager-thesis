@@ -23,20 +23,23 @@ export const PUT = auth(async function (request, { params }) {
 
 		const body = await parseJsonBody(request)
 		const { currentPassword, newPassword } = (auth.role === 'ADMIN' ? adminVariant : changePasswordSchema).parse(body) //prettier-ignore
-		const { hashedPassword } = await prisma.user.findUniqueOrThrow({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: { hashedPassword: true },
 		})
 
+		if (!user) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 		if (auth.role != 'ADMIN') {
-			const isPasswordCorrect = bcrypt.compareSync(currentPassword, hashedPassword)
+			const isPasswordCorrect = bcrypt.compareSync(currentPassword, user.hashedPassword)
 			if (!isPasswordCorrect) return RESPONSES.ERROR.AUTH.INVALID_CURRENT_PASSWORD
 		}
 
+		const hashedPassword = hashPasword(newPassword)
 		await prisma.user.update({
 			where: { id: auth.id },
-			data: { hashedPassword: hashPasword(newPassword) },
+			data: { hashedPassword },
 		})
+
 		return RESPONSES.SUCCESS.AUTH.PASSWORD_CHANGED
 	} catch (error) {
 		if (error instanceof NextResponse) return error

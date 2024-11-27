@@ -2,7 +2,7 @@ import { authorizeApiEndpoint, ensureAdminOrCertainUser, parseJsonBody } from '@
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { RESPONSES } from '@/lib/responses'
-import { changeUserNameSchema } from '@/lib/zod'
+import { changeUserNameSchema, updateUserSchema } from '@/lib/zod'
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 
@@ -45,11 +45,14 @@ export const PUT = auth(async function (request, { params }) {
 		ensureAdminOrCertainUser(auth, userId)
 
 		const body = await parseJsonBody(request)
-		const { name } = changeUserNameSchema.parse(body)
+		//@ts-expect-error it works
+		const { name, monthlyLimit = undefined } = (
+			auth.role == 'ADMIN' && body.monthlyLimit ? updateUserSchema : changeUserNameSchema
+		).parse(body)
 
 		const updatedUser = await prisma.user.update({
 			where: { id: userId },
-			data: { name },
+			data: { name, monthlyLimit },
 			select: {
 				id: true,
 				email: true,

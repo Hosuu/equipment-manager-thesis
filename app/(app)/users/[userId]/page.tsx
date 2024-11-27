@@ -1,5 +1,6 @@
 import { CreateApiKeyForm } from '@/components/forms/CreateApiKeyForm'
 import { ModalFormOpenBtn } from '@/components/forms/ModalFormOpenBtn'
+import { UpdatePasswordForm } from '@/components/forms/UpdatePasswordForm'
 import { UpdateUserNameForm } from '@/components/forms/UpdateUserForm'
 import { InfoLabel } from '@/components/InfoLabel'
 import { PageSection } from '@/components/PageSection'
@@ -40,7 +41,10 @@ export default async function UserPage({ params }: Params) {
 				label='Informacje'
 				action={
 					isSelf && (
-						<ModalFormOpenBtn label='Edytuj nazwę' FormComponent={UpdateUserNameForm} />
+						<div className='flex gap-4'>
+							<ModalFormOpenBtn label='Zmień hasło' FormComponent={UpdatePasswordForm} />
+							<ModalFormOpenBtn label='Edytuj nazwę' FormComponent={UpdateUserNameForm} />
+						</div>
 					)
 				}
 			>

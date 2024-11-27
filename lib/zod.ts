@@ -92,6 +92,11 @@ export const changeUserNameSchema = z.object({
 	name: z.string({ required_error: "'name' is required and must be a valid string." }),
 })
 
+export const updateUserSchema = z.object({
+	name: z.string({ required_error: "'name' is required and must be a valid string." }),
+	monthlyLimit: z.number(),
+})
+
 export const createUserSchema = z.object({
 	email: z
 		.string({ required_error: "'email' is required and must be a valid emial." })
@@ -103,6 +108,7 @@ export const createUserSchema = z.object({
 		.max(32, 'Password must be less than 32 characters'),
 	role: z.nativeEnum(Role).optional(),
 	name: z.string(),
+	monthlyLimit: z.number().default(40).optional(),
 })
 
 export const createDeviceSchema = z.object({

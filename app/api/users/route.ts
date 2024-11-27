@@ -13,7 +13,6 @@ export const GET = auth(async function (request) {
 		await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const query = request.nextUrl.searchParams.get('query') ?? undefined
-		const includeRole = Boolean(request.nextUrl.searchParams.get('includeRole') ?? false)
 		const { page, limit, offset } = getPaginationParams(request)
 		const totalCount = await prisma.user.count({
 			where: { name: { contains: query, mode: 'insensitive' } },
@@ -23,10 +22,18 @@ export const GET = auth(async function (request) {
 			skip: offset,
 			take: limit,
 			where: { name: { contains: query, mode: 'insensitive' } },
-			select: { id: true, email: true, name: true, role: includeRole },
+			select: {
+				id: true,
+				email: true,
+				name: true,
+				role: true,
+				createdAt: true,
+				monthlyLimit: true,
+				updatedAt: true,
+			},
 		})
 
-		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<BasicUser[]>('user', users, {
+		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<DetailedUser[]>('user', users, {
 			limit,
 			page,
 			totalCount,
@@ -44,10 +51,10 @@ export const POST = auth(async function (request) {
 		await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const body = await parseJsonBody(request)
-		const { email, password, role, name } = createUserSchema.parse(body)
+		const { email, password, role, name, monthlyLimit = 40 } = createUserSchema.parse(body)
 		const hashedPassword = hashPasword(password)
 		const createdUser = await prisma.user.create({
-			data: { email, hashedPassword, role, name },
+			data: { email, hashedPassword, role, name, monthlyLimit },
 			select: {
 				id: true,
 				email: true,

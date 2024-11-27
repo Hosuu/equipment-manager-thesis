@@ -18,16 +18,15 @@ export const AdminUsersTable = () => {
 	const [limit, setLimit] = useState<number>(10)
 	const [page, setPage] = useState<number>(1)
 	const [response, setResponse] = useState<unknown>(null)
-	const includeRole = true
 
 	const fetchData = useCallback(async () => {
-		const queryParams = Object.entries({ query, limit, page, includeRole })
+		const queryParams = Object.entries({ query, limit, page })
 			.filter(([, v]) => v !== undefined)
 			.map(([k, v]) => `${k}=${v}`)
 			.join('&')
 		const response = await (await fetch('/api/users?' + queryParams)).json()
 		setResponse(response)
-	}, [query, limit, page, includeRole])
+	}, [query, limit, page])
 
 	useEffect(() => {
 		fetchData()
@@ -63,6 +62,7 @@ export const AdminUsersTable = () => {
 					<tr>
 						<TableHead scope='col'>Nazwa</TableHead>
 						<TableHead scope='col'>Rola</TableHead>
+						<TableHead scope='col'>Limit miesięczny</TableHead>
 						<TableHead scope='col'>Email</TableHead>
 						<TableHead scope='col'>Id</TableHead>
 						<TableHead scope='col' className='text-center'>
@@ -82,6 +82,7 @@ export const AdminUsersTable = () => {
 								</Link>
 							</TableHead>
 							<TableCell>{d.role}</TableCell>
+							<TableCell>{d.monthlyLimit}</TableCell>
 							<TableCell>{d.email}</TableCell>
 							<TableCell>{d.id}</TableCell>
 							<TableCell className='flex gap-2 justify-center'>
@@ -94,6 +95,8 @@ export const AdminUsersTable = () => {
 										window.currentlyEditedUser = d.id
 										//@ts-expect-error required in form
 										window.currentlyEditedName = d.name
+										//@ts-expect-error required in form
+										window.currentlyEditedLimit = d.monthlyLimit
 									}}
 								/>
 

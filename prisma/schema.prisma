@@ -31,7 +31,7 @@ model ApiKey {
   createdAt DateTime  @default(now())
   isRevoked Boolean   @default(false)
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Device {
@@ -57,8 +57,8 @@ model Booking {
   updatedAt  DateTime @updatedAt
   isCanceled Boolean  @default(false)
 
-  user   User   @relation(fields: [userId], references: [id])
-  device Device @relation(fields: [deviceId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 }
 
 enum Role {

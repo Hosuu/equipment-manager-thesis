@@ -1,39 +1,36 @@
 'use client'
 
 import { LoaderCircle } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
 import { FC, FormEventHandler, useState } from 'react'
 
-interface AdminUpdateUserFormProps {
+interface UpdatePasswordFormProps {
 	onClose: () => void
 }
 
-export const AdminUpdateUserForm: FC<AdminUpdateUserFormProps> = ({ onClose }) => {
-	//@ts-expect-error It will exist
-	const userId = window.currentlyEditedUser
-	//@ts-expect-error It will exist
-	const prevName = window.currentlyEditedName
-	//@ts-expect-error It will exist
-	const prevLimit = window.currentlyEditedLimit
+export const UpdatePasswordForm: FC<UpdatePasswordFormProps> = ({ onClose }) => {
+	const router = useRouter()
+	const [currPass, setCurrPass] = useState<string>('')
+	const [newPass, setNewPass] = useState<string>('')
+	const { userId } = useParams()
 
-	const [name, setName] = useState<string>(prevName)
-	const [limit, setLimit] = useState<number>(prevLimit)
 	const [isPending, setIsPending] = useState<boolean>(false)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const [didSuccess, setDidSuccess] = useState(false)
 
-	const sendPostRequest = async (name: string, monthlyLimit: number) => {
+	const sendPostRequest = async (currentPassword: string, newPassword: string) => {
 		setIsPending(true)
-		const response = await fetch(`/api/users/${userId}`, {
+		const response = await fetch(`/api/users/${userId}/password`, {
 			method: 'PUT',
-			body: JSON.stringify({ name, monthlyLimit }),
+			body: JSON.stringify({ currentPassword, newPassword }),
 		})
+		if (!response.ok) return
 		const data = await response.json()
-		if (data.code === 'USER_UPDATED') {
+		if (data.code === 'PASSWORD_CHANGED') {
 			setIsPending(false)
 			setDidSuccess(true)
-			window.dispatchEvent(new CustomEvent('newUser'))
-			setTimeout(onClose, 1000)
-			onClose()
+			router.refresh()
+			setTimeout(onClose, 1500)
 		} else {
 			if (data.code === 'INVALID_DATA') setErrorMessage(data.details[0].message)
 			else setErrorMessage(data.message)
@@ -43,14 +40,14 @@ export const AdminUpdateUserForm: FC<AdminUpdateUserFormProps> = ({ onClose }) =
 
 	const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
 		event.preventDefault()
-		sendPostRequest(name, limit)
+		sendPostRequest(currPass, newPass)
 	}
 
 	if (didSuccess)
 		return (
 			<div className='max-w-sm w-screen '>
 				<div className='bg-primary-600 px-3 py-2 mb-2 text-sm rounded-md border-primary-800 border-2'>
-					Pomyślnie zaktualizowano użytkownika!
+					Pomyślnie zaktualizowano hasło!
 				</div>
 			</div>
 		)
@@ -65,26 +62,26 @@ export const AdminUpdateUserForm: FC<AdminUpdateUserFormProps> = ({ onClose }) =
 			<form onSubmit={handleSubmit}>
 				<div className='my-2'>
 					<label htmlFor='name' className='block mb-2 text-sm font-mediumtext-gray-100'>
-						Nazwa użytkownika
+						Aktualne hasło
 					</label>
 					<input
-						onChange={(e) => setName(e.target.value)}
+						type='password'
+						onChange={(e) => setCurrPass(e.target.value)}
 						className='bg-gray-100 w-full text-sm text-gray-800 px-3 py-2 rounded-md focus:outline-none ring ring-transparent focus:ring-primary-500'
-						value={name}
+						value={currPass}
 					/>
 				</div>
 				<div className='my-2'>
 					<label htmlFor='name' className='block mb-2 text-sm font-mediumtext-gray-100'>
-						Miesięczny limit godzin
+						Nowe hasło
 					</label>
 					<input
-						type='number'
-						onChange={(e) => setLimit(parseInt(e.target.value) || 0)}
+						type='password'
+						onChange={(e) => setNewPass(e.target.value)}
 						className='bg-gray-100 w-full text-sm text-gray-800 px-3 py-2 rounded-md focus:outline-none ring ring-transparent focus:ring-primary-500'
-						value={limit}
+						value={newPass}
 					/>
 				</div>
-
 				<div className='flex justify-between'>
 					<button
 						type='button'
@@ -105,7 +102,7 @@ export const AdminUpdateUserForm: FC<AdminUpdateUserFormProps> = ({ onClose }) =
 						{isPending ? (
 							<LoaderCircle className='animate-spin' strokeWidth={2} size={20} />
 						) : (
-							<p>Aktualizuj</p>
+							<p>Utwórz</p>
 						)}
 					</button>
 				</div>
