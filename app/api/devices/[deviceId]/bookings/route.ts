@@ -56,6 +56,6 @@ export const GET = auth(async function (request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

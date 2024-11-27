@@ -42,7 +42,7 @@ export const GET = auth(async function (request) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -70,10 +70,10 @@ export const POST = auth(async function (request) {
 		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedUser>('user', createdUser)
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002')
-			return RESPONSES.ERROR.AUTH.EMAIL_ALREADY_REGISTERED
+			return RESPONSES.ERROR.AUTH.EMAIL_ALREADY_REGISTERED()
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

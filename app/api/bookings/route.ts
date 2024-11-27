@@ -49,7 +49,7 @@ export const GET = auth(async function (request) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -66,12 +66,12 @@ export const POST = auth(async function (request) {
 		if (device === null) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('device')
 
 		const isAvailable = await isDeviceAvailable(deviceId, startTime, endTime)
-		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE
+		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE()
 
 		const duration = getHoursFromTimeRange(startTime, endTime)
 		const userMonthSpanQuota = await getUserMonthSpanQuota(userId, startTime, endTime)
 		const didExceededLimit = userMonthSpanQuota + duration > user.monthlyLimit
-		if (didExceededLimit) return RESPONSES.ERROR.MONTHLY_LIMIT_EXCEEDED
+		if (didExceededLimit) return RESPONSES.ERROR.MONTHLY_LIMIT_EXCEEDED()
 
 		const createdBooking = await prisma.booking.create({
 			data: { startTime, endTime, duration, deviceId, userId },
@@ -94,6 +94,6 @@ export const POST = auth(async function (request) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

@@ -75,7 +75,7 @@ export const AdminUsersTable = () => {
 						<TableRow key={d.id}>
 							<TableHead>
 								<Link
-									href={`/devices/${d.id}`}
+									href={`/users/${d.id}`}
 									className='font-medium bg-primary-600 text-white px-2 py-1 rounded-md hover:underline'
 								>
 									{d.name}

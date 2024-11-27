@@ -31,7 +31,7 @@ export const PUT = auth(async function (request, { params }) {
 		if (!user) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 		if (auth.role != 'ADMIN') {
 			const isPasswordCorrect = bcrypt.compareSync(currentPassword, user.hashedPassword)
-			if (!isPasswordCorrect) return RESPONSES.ERROR.AUTH.INVALID_CURRENT_PASSWORD
+			if (!isPasswordCorrect) return RESPONSES.ERROR.AUTH.INVALID_CURRENT_PASSWORD()
 		}
 
 		const hashedPassword = hashPasword(newPassword)
@@ -40,11 +40,11 @@ export const PUT = auth(async function (request, { params }) {
 			data: { hashedPassword },
 		})
 
-		return RESPONSES.SUCCESS.AUTH.PASSWORD_CHANGED
+		return RESPONSES.SUCCESS.AUTH.PASSWORD_CHANGED()
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

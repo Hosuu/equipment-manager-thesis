@@ -23,8 +23,8 @@ export const POST = auth(async function (request) {
 		if (isRedirectError(error)) throw error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
 		if (error instanceof AuthError && error.type === 'CredentialsSignin')
-			return RESPONSES.ERROR.AUTH.INVALID_CREDENTIALS
+			return RESPONSES.ERROR.AUTH.INVALID_CREDENTIALS()
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

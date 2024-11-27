@@ -36,7 +36,7 @@ export async function parseJsonBody(request: NextAuthRequest) {
 		return body
 	} catch (error) {
 		if (error instanceof Error) console.error(error.message)
-		throw RESPONSES.ERROR.DATA.INVALID_JSON_BODY
+		throw RESPONSES.ERROR.DATA.INVALID_JSON_BODY()
 	}
 }
 
@@ -94,10 +94,10 @@ async function authenticateApiEndpoint(request: NextAuthRequest) {
 export async function authorizeApiEndpoint(request: NextAuthRequest, requiredRole: Role = Role.USER) {
 	const auth = await authenticateApiEndpoint(request)
 
-	if (auth === null) throw RESPONSES.ERROR.AUTH.NOT_AUTHENTICATED
+	if (auth === null) throw RESPONSES.ERROR.AUTH.NOT_AUTHENTICATED()
 	if (requiredRole === 'ADMIN' && auth.user.role != 'ADMIN') {
 		console.log(`[INSSUFICIENT PERMISSIONS] USER ${auth?.user.email} => ${request.method} ${request.nextUrl.pathname}`) //prettier-ignore
-		throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS
+		throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS()
 	}
 
 	if (auth.apiKeyId)
@@ -110,7 +110,10 @@ export async function authorizeApiEndpoint(request: NextAuthRequest, requiredRol
 }
 
 export async function ensureAdminOrCertainUser(auth: { role: Role; id: string }, userId: string) {
-	if (auth.role !== 'ADMIN' || userId !== auth.id) throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS
+	if (auth.role !== 'ADMIN' && userId !== auth.id) {
+		console.log(`TEST`) //prettier-ignore
+		throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS()
+	}
 }
 
 export function getPaginationParams(request: NextAuthRequest) {

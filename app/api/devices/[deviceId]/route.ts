@@ -33,7 +33,7 @@ export const GET = auth(async function GET(request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -50,7 +50,7 @@ export const PUT = auth(async function (request, { params }) {
 
 		const body = await parseJsonBody(request)
 		const data = updateDeviceSchema.parse(body)
-		if (Object.keys(data).length === 0) return RESPONSES.ERROR.DATA.NOT_PROVIDED
+		if (Object.keys(data).length === 0) return RESPONSES.ERROR.DATA.NOT_PROVIDED()
 
 		const newData = { ...device, ...data }
 
@@ -74,7 +74,7 @@ export const PUT = auth(async function (request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -99,6 +99,6 @@ export const DELETE = auth(async function (request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

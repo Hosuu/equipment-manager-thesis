@@ -15,6 +15,7 @@ export const UpdateUserNameForm: FC<UpdateUserNameFormProps> = ({ onClose }) => 
 
 	const [isPending, setIsPending] = useState<boolean>(false)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+	const [didSuccess, setDidSuccess] = useState(false)
 
 	const sendPostRequest = async (name: string) => {
 		setIsPending(true)
@@ -25,8 +26,9 @@ export const UpdateUserNameForm: FC<UpdateUserNameFormProps> = ({ onClose }) => 
 		const data = await response.json()
 		if (data.code === 'USER_UPDATED') {
 			setIsPending(false)
+			setDidSuccess(true)
 			router.refresh()
-			onClose()
+			setTimeout(onClose, 1500)
 		} else {
 			if (data.code === 'INVALID_DATA') setErrorMessage(data.details[0].message)
 			else setErrorMessage(data.message)
@@ -38,6 +40,15 @@ export const UpdateUserNameForm: FC<UpdateUserNameFormProps> = ({ onClose }) => 
 		event.preventDefault()
 		sendPostRequest(name)
 	}
+
+	if (didSuccess)
+		return (
+			<div className='max-w-sm w-screen '>
+				<div className='bg-primary-600 px-3 py-2 mb-2 text-sm rounded-md border-primary-800 border-2'>
+					Pomyślnie zaktualizowano nazwę!
+				</div>
+			</div>
+		)
 
 	return (
 		<div className='max-w-sm w-screen '>

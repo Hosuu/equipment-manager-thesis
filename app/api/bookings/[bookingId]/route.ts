@@ -47,7 +47,7 @@ export const GET = auth(async function GET(request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -63,24 +63,24 @@ export const PUT = auth(async function (request, { params }) {
 		if (!booking) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
 		await ensureAdminOrCertainUser(auth, booking.userId)
 
-		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING
+		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING()
 
 		const body = await parseJsonBody(request)
 		const data = updateBookingSchema.parse(body)
-		if (Object.keys(data).length === 0) return RESPONSES.ERROR.DATA.NOT_PROVIDED
+		if (Object.keys(data).length === 0) return RESPONSES.ERROR.DATA.NOT_PROVIDED()
 
 		const newData = { ...booking, ...data }
 		const { deviceId, userId, endTime, startTime } = newData
-		if (endTime <= startTime) return RESPONSES.ERROR.DATA.INVALID_TIME_RANGE
+		if (endTime <= startTime) return RESPONSES.ERROR.DATA.INVALID_TIME_RANGE()
 
 		const isAvailable = await isDeviceAvailable(deviceId, startTime, endTime, bookingId)
-		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE
+		if (!isAvailable) return RESPONSES.ERROR.DEVICE_UNAVAILABLE()
 
 		const user = await prisma.user.findUnique({ where: { id: userId }, select: { monthlyLimit: true }}) //prettier-ignore
 		const userMonthSpanQuota = await getUserMonthSpanQuota(userId, startTime, endTime)
 		const duration = getHoursFromTimeRange(startTime, endTime)
 		const didExceededLimit = userMonthSpanQuota + duration > user!.monthlyLimit
-		if (didExceededLimit) return RESPONSES.ERROR.MONTHLY_LIMIT_EXCEEDED
+		if (didExceededLimit) return RESPONSES.ERROR.MONTHLY_LIMIT_EXCEEDED()
 
 		const updatedBooking = await prisma.booking.update({
 			where: { id: bookingId },
@@ -104,7 +104,7 @@ export const PUT = auth(async function (request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
 
@@ -120,7 +120,7 @@ export const DELETE = auth(async function (request, { params }) {
 		if (!booking) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('booking')
 		await ensureAdminOrCertainUser(auth, booking.userId)
 
-		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING
+		if (booking.startTime < new Date()) return RESPONSES.ERROR.COMPLETED_BOOKING()
 
 		const deletedBooking = await prisma.booking.update({
 			where: { id: bookingId },
@@ -133,6 +133,6 @@ export const DELETE = auth(async function (request, { params }) {
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })

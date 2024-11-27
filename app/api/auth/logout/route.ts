@@ -8,11 +8,11 @@ export const POST = auth(async function (request) {
 	try {
 		await authorizeApiEndpoint(request)
 		await signOut({ redirect: false })
-		return RESPONSES.SUCCESS.AUTH.LOGOUT
+		return RESPONSES.SUCCESS.AUTH.LOGOUT()
 	} catch (error) {
 		if (isRedirectError(error)) throw error
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
-		return RESPONSES.ERROR.UNEXPECTED
+		return RESPONSES.ERROR.UNEXPECTED()
 	}
 })
