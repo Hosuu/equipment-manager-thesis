@@ -22,7 +22,7 @@ export const GET = auth(async function (request, { params }) {
 				endTime: { gte: startDate },
 				startTime: { lte: endDate },
 				deviceId,
-				// isCanceled: false,
+				isCanceled: false,
 			},
 			select: {
 				startTime: true,
@@ -97,5 +97,15 @@ const calculateAvailableRanges = (
 		currentDate.setDate(currentDate.getDate() + 1)
 	}
 
-	return availableRanges.filter((range) => range.startTime > new Date())
+	const adjustedRanges = availableRanges.filter((range) => range.endTime >= new Date())
+	//ignore past
+	if (adjustedRanges[0].startTime < new Date()) adjustedRanges[0].startTime = new Date()
+
+	//clamp to queried time range
+	const last = adjustedRanges.length - 1
+	if (adjustedRanges[0].startTime < startDate) adjustedRanges[0].startTime = startDate
+	if (adjustedRanges[last].endTime > endDate) adjustedRanges[last].startTime = endDate
+
+	return adjustedRanges
+	//return availableRanges.filter((range) => range.startTime > new Date())
 }

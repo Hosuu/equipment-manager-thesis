@@ -39,12 +39,12 @@ export const GET = auth(async function GET(request, { params }) {
 
 export const PUT = auth(async function (request, { params }) {
 	try {
-		await authorizeApiEndpoint(request, Role.ADMIN)
+		const auth = await authorizeApiEndpoint(request, Role.ADMIN)
 		const { deviceId } = (await params) as DynamicParams
 
 		const device = await prisma.device.findUnique({
 			where: { id: deviceId },
-			select: { name: true, description: true, building: true, room: true },
+			select: { id: true, name: true, description: true, building: true, room: true },
 		})
 		if (!device) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('device')
 
@@ -67,8 +67,10 @@ export const PUT = auth(async function (request, { params }) {
 				createdAt: true,
 			},
 		})
-		if (updatedDevice != null)
+		if (updatedDevice != null) {
+			console.log(`[UPDATED DEVICE] USER ${auth.email}\n                DEVICE ${device.id}\n                FROM [${device.name}, ${device.description}, ${device.building}, ${device.room}]\n                TO   [${updatedDevice.name}, ${updatedDevice.description}, ${updatedDevice.building}, ${updatedDevice.room}]`) //prettier-ignore
 			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedDevice>('device', updatedDevice)
+		}
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -78,7 +80,7 @@ export const PUT = auth(async function (request, { params }) {
 
 export const DELETE = auth(async function (request, { params }) {
 	try {
-		await authorizeApiEndpoint(request, Role.ADMIN)
+		const auth = await authorizeApiEndpoint(request, Role.ADMIN)
 		const { deviceId } = (await params) as DynamicParams
 
 		const device = await prisma.device.findUnique({
@@ -91,6 +93,8 @@ export const DELETE = auth(async function (request, { params }) {
 			where: { id: deviceId },
 			select: { id: true },
 		})
+
+		console.log(`[DELETED DEVICE] USER ${auth.email} => DEVICE ${deletedDevice.id}`) //prettier-ignore
 		return RESPONSES.SUCCESS.RESOURCE.DELETED('device', deletedDevice)
 	} catch (error) {
 		if (error instanceof NextResponse) return error

@@ -59,7 +59,6 @@ export const POST = auth(async function (request) {
 		const body = await parseJsonBody(request)
 		const { userId, deviceId, startTime, endTime } = createBookingSchema.parse(body)
 		ensureAdminOrCertainUser(auth, userId)
-
 		const user = await prisma.user.findUnique({where: { id: userId }, select: { monthlyLimit: true }}) //prettier-ignore
 		if (user === null) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 
@@ -89,6 +88,7 @@ export const POST = auth(async function (request) {
 			},
 		})
 
+		console.log(`[CREATED BOOKING] USER ${createdBooking.user.email} => BOOKING ${createdBooking.id}`) //prettier-ignore
 		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedBooking>('booking', createdBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error

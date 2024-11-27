@@ -48,7 +48,7 @@ export const GET = auth(async function (request) {
 
 export const POST = auth(async function (request) {
 	try {
-		await authorizeApiEndpoint(request, Role.ADMIN)
+		const auth = await authorizeApiEndpoint(request, Role.ADMIN)
 
 		const body = await parseJsonBody(request)
 		const { email, password, role, name, monthlyLimit = 40 } = createUserSchema.parse(body)
@@ -66,6 +66,7 @@ export const POST = auth(async function (request) {
 			},
 		})
 
+		console.log(`[CREATED USER] USER ${auth.email} => USER ${createdUser.id} EMAIL ${createdUser.email}`) //prettier-ignore
 		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedUser>('user', createdUser)
 	} catch (error) {
 		if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002')

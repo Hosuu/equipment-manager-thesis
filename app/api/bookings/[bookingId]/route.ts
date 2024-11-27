@@ -97,8 +97,10 @@ export const PUT = auth(async function (request, { params }) {
 				isCanceled: true,
 			},
 		})
-		if (updatedBooking != null)
+		if (updatedBooking != null) {
+			console.log(`[MOVED BOOKING] USER ${auth.email}\n                BOOKING ${updatedBooking.id}\n                FROM [${booking.startTime.toLocaleTimeString()} -> ${booking.endTime.toLocaleTimeString()}]\n                TO   [${updatedBooking.startTime.toLocaleTimeString()} -> ${updatedBooking.endTime.toLocaleTimeString()}]`) //prettier-ignore
 			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedBooking>('booking', updatedBooking)
+		}
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)
@@ -125,6 +127,8 @@ export const DELETE = auth(async function (request, { params }) {
 			data: { isCanceled: true },
 			select: { id: true },
 		})
+		console.log(`[CANCELED BOOKING] USER ${auth.email} => BOOKING ${deletedBooking.id}`) //prettier-ignore
+
 		return RESPONSES.SUCCESS.RESOURCE.DELETED<DeletedId>('booking', deletedBooking)
 	} catch (error) {
 		if (error instanceof NextResponse) return error

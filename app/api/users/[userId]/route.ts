@@ -50,6 +50,10 @@ export const PUT = auth(async function (request, { params }) {
 			auth.role == 'ADMIN' && body.monthlyLimit ? updateUserSchema : changeUserNameSchema
 		).parse(body)
 
+		const user = await prisma.user.findUnique({ where: { id: userId } })
+
+		if (!user) return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
+
 		const updatedUser = await prisma.user.update({
 			where: { id: userId },
 			data: { name, monthlyLimit },
@@ -63,9 +67,11 @@ export const PUT = auth(async function (request, { params }) {
 				updatedAt: true,
 			},
 		})
-		if (updatedUser != null)
+		if (updatedUser != null) {
+			if(monthlyLimit)
+			console.log(`[UPDATED LIMIT] USER ${auth.email} => FOR ${updatedUser.email} FROM ${user.monthlyLimit} TO ${updatedUser.monthlyLimit}`) //prettier-ignore
 			return RESPONSES.SUCCESS.RESOURCE.UPDATED<DetailedUser>('user', updatedUser)
-		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
+		} else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof ZodError) return RESPONSES.ERROR.DATA.INVALID(error)
@@ -81,9 +87,10 @@ export const DELETE = auth(async function (request, { params }) {
 		ensureAdminOrCertainUser(auth, userId)
 
 		const deletedUser = await prisma.user.delete({ where: { id: userId }, select: { id: true } })
-		if (deletedUser != null)
+		if (deletedUser != null) {
+			console.log(`[DELETED USER] USER ${auth.email} => USER ${deletedUser.id}`) //prettier-ignore
 			return RESPONSES.SUCCESS.RESOURCE.DELETED<DeletedId>('user', deletedUser)
-		else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
+		} else return RESPONSES.ERROR.RESOURCE_NOT_FOUND('user')
 	} catch (error) {
 		if (error instanceof NextResponse) return error
 		if (error instanceof Error) console.error(error.message)

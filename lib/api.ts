@@ -23,6 +23,7 @@ export async function isDeviceAvailable(
 			endTime: { gte: startTime },
 			startTime: { lte: endTime },
 			deviceId: deviceId,
+			isCanceled: false,
 		},
 	})
 
@@ -43,7 +44,7 @@ async function verifyApiKey(key: string) {
 	const keyHash = generateApiKeyHash(key)
 	const data = await prisma.apiKey.findUnique({
 		where: { keyHash, isRevoked: false },
-		select: { id: true, user: { select: { id: true, role: true } } },
+		select: { id: true, user: { select: { id: true, role: true, email: true } } },
 	})
 
 	if (data) return { apiKeyId: data.id, user: data.user }
@@ -80,8 +81,8 @@ async function authenticateApiEndpoint(request: NextAuthRequest) {
 	//4. Check sessionCookie
 	try {
 		if (request?.auth?.user) {
-			const { id, role } = request.auth.user
-			return { apiKeyId: null, user: { id: id!, role } }
+			const { id, role, email } = request.auth.user
+			return { apiKeyId: null, user: { id: id!, role, email: email! } }
 		}
 	} catch (error) {
 		if (error instanceof Error) console.error(error.message)
@@ -94,8 +95,10 @@ export async function authorizeApiEndpoint(request: NextAuthRequest, requiredRol
 	const auth = await authenticateApiEndpoint(request)
 
 	if (auth === null) throw RESPONSES.ERROR.AUTH.NOT_AUTHENTICATED
-	if (requiredRole === 'ADMIN' && auth.user.role != 'ADMIN')
+	if (requiredRole === 'ADMIN' && auth.user.role != 'ADMIN') {
+		console.log(`[INSSUFICIENT PERMISSIONS] USER ${auth?.user.email} => ${request.method} ${request.nextUrl.pathname}`) //prettier-ignore
 		throw RESPONSES.ERROR.AUTH.INSUFFICIENT_PERMISSIONS
+	}
 
 	if (auth.apiKeyId)
 		await prisma.apiKey.update({

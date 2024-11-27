@@ -29,6 +29,7 @@ export const GET = auth(async function (request) {
 				description: includeDesc,
 			},
 		})
+
 		return RESPONSES.SUCCESS.RESOURCE.MANY_RETRIEVED<BasicDevice[]>('device', devices, {
 			limit,
 			page,
@@ -44,7 +45,7 @@ export const GET = auth(async function (request) {
 
 export const POST = auth(async function (request) {
 	try {
-		await authorizeApiEndpoint(request, Role.ADMIN)
+		const auth = await authorizeApiEndpoint(request, Role.ADMIN)
 		const body = await parseJsonBody(request)
 		const { name, building, room, description } = createDeviceSchema.parse(body)
 		const createdDevice = await prisma.device.create({
@@ -59,6 +60,8 @@ export const POST = auth(async function (request) {
 				createdAt: true,
 			},
 		})
+
+		console.log(`[CREATED DEVICE] USER ${auth.email} => DEVICE ${createdDevice.id} NAMED ${createdDevice.name}`) //prettier-ignore
 		return RESPONSES.SUCCESS.RESOURCE.CREATED<DetailedDevice>('device', createdDevice)
 	} catch (error) {
 		if (error instanceof NextResponse) return error
