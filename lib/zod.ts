@@ -21,10 +21,10 @@ export const updateBookingSchema = z.object({
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "'startTime' must be a future date.",
 		})
-		.refine((date) => date.getHours() > 5, {
+		.refine((date) => date.getUTCHours() > 4, {
 			message: "'startTime' must be after 6:00.",
 		})
-		.refine((date) => date.getHours() < 23, {
+		.refine((date) => date.getUTCHours() < 22, {
 			message: "'startTime' must be before 22:00.",
 		})
 		.optional(),
@@ -33,10 +33,10 @@ export const updateBookingSchema = z.object({
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "'endTime' must be a future date.",
 		})
-		.refine((date) => date.getHours() > 5, {
+		.refine((date) => date.getUTCHours() > 4, {
 			message: "'endTime' must be after 6:00.",
 		})
-		.refine((date) => date.getHours() < 23, {
+		.refine((date) => date.getUTCHours() < 22, {
 			message: "'endTime' must be before 22:00.",
 		})
 		.optional(),
@@ -50,20 +50,20 @@ export const createBookingSchema = z
 			.refine((date) => date.getTime() > Date.now(), {
 				message: "'startTime' must be a future date.",
 			})
-			.refine((date) => date.getHours() > 5, {
+			.refine((date) => date.getUTCHours() > 4, {
 				message: "'startTime' must be after 6:00.",
 			})
-			.refine((date) => date.getHours() < 23, {
+			.refine((date) => date.getUTCHours() < 22, {
 				message: "'startTime' must be before 22:00.",
 			}),
 		endTime: dateTimeSchema
 			.refine((date) => date.getTime() > Date.now(), {
 				message: "'endTime' must be a future date.",
 			})
-			.refine((date) => date.getHours() > 5, {
+			.refine((date) => date.getUTCHours() > 4, {
 				message: "'endTime' must be after 6:00.",
 			})
-			.refine((date) => date.getHours() < 23, {
+			.refine((date) => date.getUTCHours() < 22, {
 				message: "'endTime' must be before 22:00.",
 			}),
 	})

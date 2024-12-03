@@ -50,19 +50,19 @@ const calculateAvailableRanges = (
 	bookings: TimeRange[]
 ): TimeRange[] => {
 	const availableRanges: TimeRange[] = []
-	const dayStartHour = 6
-	const dayEndHour = 22
+	const dayStartUTCHour = 5
+	const dayEndUTCHour = 21
 
 	// Iterate over each day in the range
 	const currentDate = new Date(startDate)
-	currentDate.setHours(0, 0, 0, 0) // Start at midnight of the current day
+	currentDate.setUTCHours(0, 0, 0, 0) // Start at midnight of the current day
 
 	while (currentDate <= endDate) {
 		const dayStart = new Date(currentDate)
-		dayStart.setHours(dayStartHour, 0, 0, 0)
+		dayStart.setUTCHours(dayStartUTCHour, 0, 0, 0)
 
 		const dayEnd = new Date(currentDate)
-		dayEnd.setHours(dayEndHour, 0, 0, 0)
+		dayEnd.setUTCHours(dayEndUTCHour, 0, 0, 0)
 
 		// Adjust start and end times if the current day is partially within the range
 		const availableStart = new Date(Math.max(dayStart.getTime(), startDate.getTime()))
